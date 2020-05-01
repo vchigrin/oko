@@ -1,0 +1,7 @@
+build \
+  --action_env CC=/usr/bin/clang-9 \
+  --action_env CXX=/usr/bin/clang++-9 \
+  --cxxopt --std=c++17 \
+  --cxxopt -stdlib=libc++ \
+  --cxxopt -Wall \
+  --cxxopt -Werror \
