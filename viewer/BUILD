@@ -4,6 +4,7 @@ cc_binary(
         "main.cc",
     ],
     deps = [
+        "@boost//:program_options",
         "@libcxx",
     ],
 )
