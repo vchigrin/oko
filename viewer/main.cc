@@ -5,10 +5,29 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 
+#include "viewer/memorylog_log_file.h"
+
 namespace po = boost::program_options;
 
 void AnalyzeFile(const std::string& log_path) noexcept {
-  std::cout << "Analyzing " << log_path << std::endl;
+  oko::MemorylogLogFile file;
+  if (!file.Parse(log_path)) {
+    std::cerr << "Failed parse file " << log_path << std::endl;
+    return;
+  }
+  const auto& records = file.GetRecords();
+  std::cout << "Got " << records.size() << " log records" << std::endl;
+  for (size_t i = 0; i < std::min(5ul, records.size()); ++i) {
+    std::cout << "======" << std::endl;
+    auto t = records[i].timestamp().time_since_epoch();
+    std::cout
+        << std::chrono::duration_cast<std::chrono::seconds>(t).count()
+        << ":"
+        << std::chrono::duration_cast<std::chrono::nanoseconds>(
+            t -  std::chrono::duration_cast<std::chrono::seconds>(t)).count()
+        << " "
+        << records[i].message() << std::endl;
+  }
 }
 
 int main(int argc, char* argv[]) {

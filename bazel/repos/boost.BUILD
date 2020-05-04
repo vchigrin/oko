@@ -13,3 +13,12 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [":headers"],
 )
+
+cc_library(
+    name = "iostreams",
+    srcs = glob([
+        "lib/libboost_iostreams.so*",
+    ]),
+    visibility = ["//visibility:public"],
+    deps = [":headers"],
+)
