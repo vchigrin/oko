@@ -11,3 +11,9 @@ new_local_repository(
     build_file = "bazel/repos/boost.BUILD",
     path = "/opt/boost_1_73_0",
 )
+
+new_local_repository(
+    name = "ncurses",
+    build_file = "bazel/repos/ncurses.BUILD",
+    path = "/usr",
+)

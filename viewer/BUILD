@@ -4,6 +4,8 @@ cc_binary(
         "log_file.h",
         "log_record.h",
         "log_view.h",
+        "log_window.cc",
+        "log_window.h",
         "main.cc",
         "memorylog_log_file.cc",
         "memorylog_log_file.h",
@@ -12,5 +14,6 @@ cc_binary(
         "@boost//:iostreams",
         "@boost//:program_options",
         "@libcxx",
+        "@ncurses",
     ],
 )

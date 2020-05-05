@@ -4,30 +4,48 @@
 
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <ncurses.h>
 
 #include "viewer/memorylog_log_file.h"
+#include "viewer/log_window.h"
 
 namespace po = boost::program_options;
 
+void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
+  initscr();
+  start_color();
+  noecho();
+  // Invisible cursor.
+  curs_set(0);
+  keypad(stdscr, true);
+  int max_row = 0, max_col = 0;
+  getmaxyx(stdscr, max_row, max_col);
+  refresh();
+  oko::LogWindow log_window(std::move(file), 0, 0, max_row, max_col);
+
+  bool should_run = true;
+  while (should_run) {
+    log_window.Display();
+    int key = getch();
+    switch (key) {
+      case 'q':
+        should_run = false;
+        break;
+      default:
+        log_window.HandleKeyPress(key);
+    }
+  }
+  endwin();
+}
+
 void AnalyzeFile(const std::string& log_path) noexcept {
-  oko::MemorylogLogFile file;
-  if (!file.Parse(log_path)) {
+  std::unique_ptr<oko::MemorylogLogFile> file(
+      std::make_unique<oko::MemorylogLogFile>());
+  if (!file->Parse(log_path)) {
     std::cerr << "Failed parse file " << log_path << std::endl;
     return;
   }
-  const auto& records = file.GetRecords();
-  std::cout << "Got " << records.size() << " log records" << std::endl;
-  for (size_t i = 0; i < std::min(5ul, records.size()); ++i) {
-    std::cout << "======" << std::endl;
-    auto t = records[i].timestamp().time_since_epoch();
-    std::cout
-        << std::chrono::duration_cast<std::chrono::seconds>(t).count()
-        << ":"
-        << std::chrono::duration_cast<std::chrono::nanoseconds>(
-            t -  std::chrono::duration_cast<std::chrono::seconds>(t)).count()
-        << " "
-        << records[i].message() << std::endl;
-  }
+  ShowFile(std::move(file));
 }
 
 int main(int argc, char* argv[]) {
