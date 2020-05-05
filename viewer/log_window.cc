@@ -8,6 +8,7 @@
 #include <array>
 #include <charconv>
 #include <chrono>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -26,6 +27,7 @@ const int kDebugColorPair = 2;
 const int kInfoColorPair = 3;
 const int kWarnColorPair = 4;
 const int kErrColorPair = 5;
+const int kMarkColorPair = 6;
 
 class WithColor {
  public:
@@ -66,6 +68,7 @@ LogWindow::LogWindow(
   init_pair(kInfoColorPair, COLOR_GREEN, COLOR_BLACK);
   init_pair(kWarnColorPair, COLOR_YELLOW, COLOR_BLACK);
   init_pair(kErrColorPair, COLOR_RED, COLOR_BLACK);
+  init_pair(kMarkColorPair, COLOR_BLACK, COLOR_RED);
 }
 
 void LogWindow::Move(
@@ -87,23 +90,37 @@ void LogWindow::Display() noexcept {
   const std::vector<LogRecord>& records = view_->GetRecords();
   for (size_t i = first_shown_record_, row = 0;
       i < after_last_record; ++i, ++row) {
-    DisplayTime(row, records[i].timestamp());
+    if (row == cursor_line_) {
+      wattron(window_.get(), A_REVERSE);
+    }
+    const bool is_marked = IsMarked(i);
+    if (is_marked) {
+      wattron(window_.get(), COLOR_PAIR(kMarkColorPair));
+    }
+    DisplayTime(is_marked, row, records[i].timestamp());
     mvwaddch(window_.get(), row, kTimeStartCol + kTimeColSize, ' ');
-    DisplayLevel(row, records[i].log_level());
+    DisplayLevel(is_marked, row, records[i].log_level());
     mvwaddch(window_.get(), row, kLevelStartCol + kLevelColSize, ' ');
-    DisplayMessage(row,  records[i].message());
+    DisplayMessage(row, records[i].message());
     wclrtoeol(window_.get());
+    if (is_marked) {
+      wattroff(window_.get(), COLOR_PAIR(kMarkColorPair));
+    }
+    if (row == cursor_line_) {
+      wattroff(window_.get(), A_REVERSE);
+    }
   }
   wrefresh(window_.get());
 }
 
 void LogWindow::DisplayTime(
+    bool is_marked,
     int row, const LogRecord::time_point time_point) noexcept {
   std::array<char, kTimeColSize + 1> buf;
   const int secs = std::chrono::duration_cast<std::chrono::seconds>(
-        time_point.time_since_epoch()).count();
+      time_point.time_since_epoch()).count();
   const int nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(
-        time_point.time_since_epoch() - std::chrono::seconds(secs)).count();
+      time_point.time_since_epoch() - std::chrono::seconds(secs)).count();
   char* next = buf.data();
   char* end_ptr = buf.data() + buf.size();
   auto to_char_res = std::to_chars(next, end_ptr, secs);
@@ -130,7 +147,10 @@ void LogWindow::DisplayTime(
   }
   *next++ = '\0';
   {
-    WithColor color(window_, kTimeColorPair);
+    std::optional<WithColor> color;
+    if (!is_marked) {
+      color.emplace(window_, kTimeColorPair);
+    }
     mvwaddstr(
         window_.get(),
         row, kTimeStartCol,
@@ -138,7 +158,9 @@ void LogWindow::DisplayTime(
   }
 }
 
-void LogWindow::DisplayLevel(int row, const LogLevel level) noexcept {
+void LogWindow::DisplayLevel(
+    bool is_marked,
+    int row, const LogLevel level) noexcept {
   std::string_view level_str;
   int level_pair = 0;
   switch (level) {
@@ -163,7 +185,10 @@ void LogWindow::DisplayLevel(int row, const LogLevel level) noexcept {
   }
   assert(level_str.size() == kLevelColSize);
   {
-    WithColor color(window_, level_pair);
+    std::optional<WithColor> color;
+    if (!is_marked) {
+      color.emplace(window_, level_pair);
+    }
     mvwaddnstr(
         window_.get(),
         row, kLevelStartCol,
@@ -187,17 +212,37 @@ void LogWindow::DisplayMessage(
 void LogWindow::HandleKeyPress(int key) noexcept {
   const std::vector<LogRecord>& records = view_->GetRecords();
   switch (key) {
+    case 'm':
+      marking_ = !marking_;
+      if (marking_) {
+        marked_records_begin_ = GetRecordUnderCursor();
+        marked_records_end_ = marked_records_begin_ + 1;
+        marked_anchor_record_ = marked_records_begin_;
+      }
+      break;
     case 'j':
     case KEY_DOWN:
-      if (GetDisplayedRecordAfterLast() < records.size()) {
-        ++first_shown_record_;
+      if (cursor_line_ < (num_rows_ - 1)) {
+        if (cursor_line_ + first_shown_record_ + 1 < records.size()) {
+          ++cursor_line_;
+        }
+      } else {
+        if (GetDisplayedRecordAfterLast() < records.size()) {
+          ++first_shown_record_;
+        }
       }
+      MaybeExtendMarking();
       break;
     case 'k':
     case KEY_UP:
-      if (first_shown_record_ > 0) {
-        --first_shown_record_;
+      if (cursor_line_ > 0) {
+        --cursor_line_;
+      } else {
+        if (first_shown_record_ > 0) {
+          --first_shown_record_;
+        }
       }
+      MaybeExtendMarking();
       break;
     case 'h':
     case KEY_LEFT:
@@ -212,8 +257,25 @@ void LogWindow::HandleKeyPress(int key) noexcept {
     case 'G':
       if (records.size() > static_cast<size_t>(num_rows_)) {
         first_shown_record_ = records.size() - num_rows_;
+        cursor_line_ = num_rows_ - 1;
+      } else {
+        cursor_line_ = static_cast<int>(records.size()) - 1;
       }
       break;
+  }
+}
+
+void LogWindow::MaybeExtendMarking() noexcept {
+  if (!marking_) {
+    return;
+  }
+  size_t cur_record = GetRecordUnderCursor();
+  if (cur_record < marked_anchor_record_) {
+    marked_records_begin_ = cur_record;
+    marked_records_end_ = marked_anchor_record_ + 1;
+  } else {
+    marked_records_begin_ = marked_anchor_record_;
+    marked_records_end_ = cur_record + 1;
   }
 }
 

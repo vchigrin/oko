@@ -28,8 +28,17 @@ class LogWindow {
  private:
   size_t GetDisplayedRecordAfterLast() const noexcept;
   void DisplayMessage(int row, const std::string_view& message) noexcept;
-  void DisplayLevel(int row, const LogLevel level) noexcept;
-  void DisplayTime(int row, const LogRecord::time_point time_point) noexcept;
+  void DisplayLevel(bool is_marked,
+      int row, const LogLevel level) noexcept;
+  void DisplayTime(bool is_marked,
+      int row, const LogRecord::time_point time_point) noexcept;
+  void MaybeExtendMarking() noexcept;
+  bool IsMarked(size_t index) const noexcept {
+    return index >= marked_records_begin_ && index < marked_records_end_;
+  }
+  size_t GetRecordUnderCursor() const noexcept {
+    return first_shown_record_ + cursor_line_;
+  }
 
   std::unique_ptr<LogView> view_;
   std::unique_ptr<WINDOW, int(*)(WINDOW*)> window_;
@@ -39,6 +48,16 @@ class LogWindow {
   int num_columns_;
   size_t first_shown_record_ = 0;
   size_t message_horz_offset_ = 0;
+  int cursor_line_ = 0;
+  // Record where marking was started - acts as anchor for updating
+  // marked region.
+  size_t marked_anchor_record_ = 0;
+  // Index of first marked record, inclusively.
+  size_t marked_records_begin_ = 0;
+  // One plus index of last marked record.
+  size_t marked_records_end_ = 0;
+  // Whether we're marking region during movement.
+  bool marking_ = false;
 };
 
 }  // namespace oko
