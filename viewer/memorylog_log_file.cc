@@ -5,8 +5,7 @@
 #include "viewer/memorylog_log_file.h"
 
 #include <algorithm>
-#include <boost/algorithm/string/find_iterator.hpp>
-#include <boost/algorithm/string/finder.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <charconv>
 #include <utility>
 
@@ -128,43 +127,33 @@ bool MemorylogLogFile::ExtractTimestampFromRecord(
     LogRecord::time_point* result_timestamp) noexcept {
   // Assumes format like
   // "time anchor: 351638.672110347 1588316753.784846326 ...."
-  using sv_find_iterator =
-      boost::algorithm::split_iterator<std::string_view::iterator>;
-  auto range_it = boost::algorithm::make_split_iterator(
-      raw_rec.message, boost::algorithm::first_finder(" "));
-  static const std::string_view kTime("time");
-  static const std::string_view kAnchor("anchor:");
-  if (range_it == sv_find_iterator() ||
-      !std::equal(kTime.begin(), kTime.end(), range_it->begin())) {
+  static const std::string_view kTimeAnchor("time anchor: ");
+  if (!boost::algorithm::starts_with(raw_rec.message, kTimeAnchor)) {
     return false;
   }
-  ++range_it;
-  if (range_it == sv_find_iterator() ||
-      !std::equal(kAnchor.begin(), kAnchor.end(), range_it->begin())) {
+  const size_t next_space = raw_rec.message.find(' ', kTimeAnchor.size());
+  if (next_space == std::string_view::npos) {
     return false;
   }
-  ++range_it;
-  if (range_it == sv_find_iterator()) {
-    return false;
-  }
-  ++range_it;
-  if (range_it == sv_find_iterator()) {
-    return false;
-  }
+
   // Now range points to timestamp - seconds.nanoseconds.
   uint64_t seconds = 0, nanoseconds = 0;
   auto from_chars_res = std::from_chars(
-      range_it->begin(), range_it->end(), seconds);
+      raw_rec.message.data() + next_space + 1,
+      raw_rec.message.data() + raw_rec.message.size(),
+      seconds);
   if (from_chars_res.ec != std::errc() ||
-      from_chars_res.ptr == range_it->end() ||
+      from_chars_res.ptr == raw_rec.message.end() ||
       *from_chars_res.ptr != '.') {
     return false;
   }
   const char* ns_string_ptr = from_chars_res.ptr + 1;
   from_chars_res = std::from_chars(
-      ns_string_ptr, range_it->end(), nanoseconds);
+      ns_string_ptr,
+      raw_rec.message.data() + raw_rec.message.size(),
+      nanoseconds);
   if (from_chars_res.ec != std::errc() ||
-      from_chars_res.ptr != range_it->end()) {
+      *from_chars_res.ptr != ' ') {
     return false;
   }
   *result_timestamp = LogRecord::time_point(
