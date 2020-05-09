@@ -21,9 +21,26 @@ class LogWindow {
       int num_columns) noexcept;
   void Move(
       int start_row, int start_col,
-      int num_rows_, int num_columns) noexcept;
+      int num_rows, int num_columns) noexcept;
   void Display() noexcept;
   void HandleKeyPress(int key) noexcept;
+
+  uint64_t total_records() const noexcept {
+    return view_->GetRecords().size();
+  }
+
+  uint64_t marked_records() const noexcept {
+    return marked_records_end_ - marked_records_begin_;
+  }
+
+  LogRecord::time_point::duration marked_duration() const noexcept {
+    if (marked_records_end_ == marked_records_begin_) {
+      return {};
+    }
+    const auto& records = view_->GetRecords();
+    return records[marked_records_end_ - 1].timestamp() -
+        records[marked_records_begin_].timestamp();
+  }
 
  private:
   size_t GetDisplayedRecordAfterLast() const noexcept;

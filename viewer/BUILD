@@ -9,6 +9,9 @@ cc_binary(
         "main.cc",
         "memorylog_log_file.cc",
         "memorylog_log_file.h",
+        "ncurses_helpers.h",
+        "status_window.cc",
+        "status_window.h",
     ],
     deps = [
         "@boost//:iostreams",
