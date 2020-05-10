@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #pragma once
-#include <ncurses.h>
 
 #include <memory>
 
 #include "viewer/log_view.h"
+#include "viewer/window.h"
 
 namespace oko {
 
-class LogWindow {
+class LogWindow : public Window {
  public:
   LogWindow(
       std::unique_ptr<LogView> view,
@@ -19,11 +19,7 @@ class LogWindow {
       int start_col,
       int num_rows,
       int num_columns) noexcept;
-  void Move(
-      int start_row, int start_col,
-      int num_rows, int num_columns) noexcept;
-  void Display() noexcept;
-  void HandleKeyPress(int key) noexcept;
+  void HandleKeyPress(int key) noexcept override;
 
   uint64_t total_records() const noexcept {
     return view_->GetRecords().size();
@@ -43,6 +39,7 @@ class LogWindow {
   }
 
  private:
+  void DisplayImpl() noexcept override;
   size_t GetDisplayedRecordAfterLast() const noexcept;
   void DisplayMessage(int row, const std::string_view& message) noexcept;
   void DisplayLevel(bool is_marked,
@@ -58,11 +55,6 @@ class LogWindow {
   }
 
   std::unique_ptr<LogView> view_;
-  std::unique_ptr<WINDOW, int(*)(WINDOW*)> window_;
-  int start_row_;
-  int start_col_;
-  int num_rows_;
-  int num_columns_;
   size_t first_shown_record_ = 0;
   size_t message_horz_offset_ = 0;
   int cursor_line_ = 0;

@@ -12,6 +12,8 @@ cc_binary(
         "ncurses_helpers.h",
         "status_window.cc",
         "status_window.h",
+        "window.cc",
+        "window.h",
     ],
     deps = [
         "@boost//:iostreams",

@@ -15,14 +15,12 @@ StatusWindow::StatusWindow(
     int start_row,
     int start_col,
     int num_columns) noexcept
-    : file_name_(std::move(file_name)),
-      window_(newwin(kRows, num_columns, start_row, start_col),
-              &delwin) {
-  assert(window_);
+    : Window(start_row, start_col, kRows, num_columns),
+      file_name_(std::move(file_name)) {
   wbkgd(window_.get(), COLOR_PAIR(kStatusColorPair));
 }
 
-void StatusWindow::Display() noexcept {
+void StatusWindow::DisplayImpl() noexcept {
   mvwprintw(
       window_.get(),
       0, 0,
@@ -47,7 +45,9 @@ void StatusWindow::Display() noexcept {
         marked_ns);
   }
   wclrtoeol(window_.get());
-  wrefresh(window_.get());
+}
+
+void StatusWindow::HandleKeyPress(int key) noexcept {
 }
 
 }  // namespace oko

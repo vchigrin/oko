@@ -32,30 +32,11 @@ LogWindow::LogWindow(
     int start_col,
     int num_rows,
     int num_columns) noexcept
-    : view_(std::move(view)),
-      window_(newwin(num_rows, num_columns, start_row, start_col),
-              &delwin),
-      start_row_(start_row),
-      start_col_(start_col),
-      num_rows_(num_rows),
-      num_columns_(num_columns) {
+    : Window(start_row, start_col, num_rows, num_columns),
+      view_(std::move(view)) {
 }
 
-void LogWindow::Move(
-    int start_row, int start_col, int num_rows, int num_columns) noexcept {
-  assert(start_row >= 0);
-  assert(start_col >= 0);
-  assert(num_rows > 0);
-  assert(num_columns > 0);
-  start_row_ = start_row;
-  start_col_ = start_col;
-  num_rows_ = num_rows;
-  num_columns_ = num_columns;
-  window_.reset(
-      newwin(num_rows_, num_columns_, start_row_, start_col_));
-}
-
-void LogWindow::Display() noexcept {
+void LogWindow::DisplayImpl() noexcept {
   const size_t after_last_record = GetDisplayedRecordAfterLast();
   const std::vector<LogRecord>& records = view_->GetRecords();
   for (size_t i = first_shown_record_, row = 0;
@@ -80,7 +61,6 @@ void LogWindow::Display() noexcept {
       wattroff(window_.get(), A_REVERSE);
     }
   }
-  wrefresh(window_.get());
 }
 
 void LogWindow::DisplayTime(

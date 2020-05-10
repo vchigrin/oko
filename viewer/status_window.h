@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 #pragma once
-#include <ncurses.h>
-
-#include <memory>
 #include <string>
 
 #include "viewer/log_record.h"
+#include "viewer/window.h"
 
 
 namespace oko {
@@ -20,7 +18,7 @@ struct StatusInfo {
 };
 
 // Always fixed height status window, usually at the bottom of screen.
-class StatusWindow {
+class StatusWindow : public Window {
  public:
   static constexpr int kRows = 2;
 
@@ -34,11 +32,12 @@ class StatusWindow {
     current_status_ = status;
   }
 
-  void Display() noexcept;
+  void HandleKeyPress(int key) noexcept override;
 
  private:
+  void DisplayImpl() noexcept override;
+
   const std::string file_name_;
-  std::unique_ptr<WINDOW, int(*)(WINDOW*)> window_;
   StatusInfo current_status_;
 };
 
