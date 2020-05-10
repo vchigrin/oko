@@ -27,13 +27,13 @@ const int kMessageStartCol = kLevelStartCol + kLevelColSize + 1;
 }  // namespace
 
 LogWindow::LogWindow(
-    std::unique_ptr<LogView> view,
+    LogView* view,
     int start_row,
     int start_col,
     int num_rows,
     int num_columns) noexcept
     : Window(start_row, start_col, num_rows, num_columns),
-      view_(std::move(view)) {
+      view_(view) {
 }
 
 void LogWindow::DisplayImpl() noexcept {
@@ -233,6 +233,19 @@ size_t LogWindow::GetDisplayedRecordAfterLast() const noexcept {
   return std::min(
       first_shown_record_ + num_rows_ + 1,
       view_->GetRecords().size());
+}
+
+void LogWindow::SetView(LogView* view) noexcept {
+  view_ = view;
+  first_shown_record_ = 0;
+  message_horz_offset_ = 0;
+  // TODO(vchigrin): Attempt to preserve scroll position.
+  cursor_line_ = 0;
+  marked_anchor_record_ = 0;
+  // TODO(vchigrin): Attempt to preserve marked region.
+  marked_records_begin_ = 0;
+  marked_records_end_ = 0;
+  marking_ = false;
 }
 
 }  // namespace oko

@@ -40,6 +40,10 @@ const int kMarkColorPair = 6;
 const int kStatusColorPair = 7;
 const int kStatusMarkColorPair = 8;
 
+// Filters list window
+const int kIncludeFilterColorPair = 9;
+const int kExcludeFilterColorPair = 10;
+
 
 inline void InitColors() {
   init_pair(kTimeColorPair, COLOR_YELLOW, COLOR_BLACK);
@@ -51,6 +55,9 @@ inline void InitColors() {
 
   init_pair(kStatusColorPair, COLOR_BLACK, COLOR_WHITE);
   init_pair(kStatusMarkColorPair, COLOR_RED, COLOR_WHITE);
+
+  init_pair(kIncludeFilterColorPair, COLOR_BLACK, COLOR_GREEN);
+  init_pair(kExcludeFilterColorPair, COLOR_BLACK, COLOR_RED);
 }
 
 }  // namespace oko

@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <memory>
-
 #include "viewer/log_view.h"
 #include "viewer/window.h"
 
@@ -14,7 +12,7 @@ namespace oko {
 class LogWindow : public Window {
  public:
   LogWindow(
-      std::unique_ptr<LogView> view,
+      LogView* view,
       int start_row,
       int start_col,
       int num_rows,
@@ -38,6 +36,8 @@ class LogWindow : public Window {
         records[marked_records_begin_].timestamp();
   }
 
+  void SetView(LogView* view) noexcept;
+
  private:
   void DisplayImpl() noexcept override;
   size_t GetDisplayedRecordAfterLast() const noexcept;
@@ -54,7 +54,7 @@ class LogWindow : public Window {
     return first_shown_record_ + cursor_line_;
   }
 
-  std::unique_ptr<LogView> view_;
+  LogView* view_;
   size_t first_shown_record_ = 0;
   size_t message_horz_offset_ = 0;
   int cursor_line_ = 0;

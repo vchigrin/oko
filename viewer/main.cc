@@ -9,11 +9,12 @@
 #include <iostream>
 #include <optional>
 
+#include "viewer/add_pattern_filter_window.h"
+#include "viewer/filters_list_window.h"
 #include "viewer/log_window.h"
 #include "viewer/memorylog_log_file.h"
 #include "viewer/ncurses_helpers.h"
 #include "viewer/status_window.h"
-#include "viewer/add_pattern_filter_window.h"
 
 namespace po = boost::program_options;
 
@@ -30,11 +31,16 @@ void ShowFile(
   getmaxyx(stdscr, max_row, max_col);
   refresh();
   oko::InitColors();
+  oko::FilterListWindow filter_list(0, 0, max_col);
   oko::LogWindow log_window(
-      std::move(file), 0, 0, max_row - oko::StatusWindow::kRows, max_col);
+      file.get(),
+      filter_list.GetDesiredHeight(), 0,
+      max_row - oko::StatusWindow::kRows - filter_list.GetDesiredHeight(),
+      max_col);
   oko::StatusWindow status_window(
       log_path, max_row - oko::StatusWindow::kRows, 0, max_col);
   std::optional<oko::AddPatternFilterWindow> add_pattern_filter_window;
+  std::vector<oko::LogPatternFilter*> active_filters;
 
   bool should_run = true;
   while (should_run) {
@@ -45,6 +51,7 @@ void ShowFile(
     status_window.UpdateStatus(info);
     log_window.Display();
     status_window.Display();
+    filter_list.Display();
     if (add_pattern_filter_window) {
       add_pattern_filter_window->Display();
     }
@@ -67,10 +74,35 @@ void ShowFile(
       }
     }
     if (add_pattern_filter_window && add_pattern_filter_window->finished()) {
+      std::string pattern = add_pattern_filter_window->entered_string();
+      if (!pattern.empty()) {
+        oko::LogView* last_view = active_filters.empty() ?
+            static_cast<oko::LogView*>(file.get()) : active_filters.back();
+        oko::LogPatternFilter* new_filter = new oko::LogPatternFilter(
+            last_view,
+            std::move(pattern),
+            add_pattern_filter_window->is_include_filter());
+        active_filters.push_back(new_filter);
+        filter_list.UpdateActiveFilters(active_filters);
+        log_window.SetView(new_filter);
+        const int filter_window_height =
+            filter_list.GetDesiredHeight();
+        filter_list.Move(
+            0, 0,
+            filter_window_height,
+            max_col);
+        log_window.Move(
+            filter_window_height, 0,
+            max_row - oko::StatusWindow::kRows - filter_window_height,
+            max_col);
+      }
       add_pattern_filter_window = std::nullopt;
     }
   }
   endwin();
+  for (oko::LogView* v : active_filters) {
+    delete v;
+  }
 }
 
 void AnalyzeFile(const std::string& log_path) noexcept {

@@ -3,7 +3,11 @@ cc_binary(
     srcs = [
         "add_pattern_filter_window.cc",
         "add_pattern_filter_window.h",
+        "filters_list_window.cc",
+        "filters_list_window.h",
         "log_file.h",
+        "log_pattern_filter.cc",
+        "log_pattern_filter.h",
         "log_record.h",
         "log_view.h",
         "log_window.cc",
