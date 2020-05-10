@@ -3,13 +3,17 @@
 // found in the LICENSE file.
 
 #include <boost/program_options.hpp>
-#include <iostream>
+
 #include <ncurses.h>
+
+#include <iostream>
+#include <optional>
 
 #include "viewer/log_window.h"
 #include "viewer/memorylog_log_file.h"
 #include "viewer/ncurses_helpers.h"
 #include "viewer/status_window.h"
+#include "viewer/add_pattern_filter_window.h"
 
 namespace po = boost::program_options;
 
@@ -30,6 +34,7 @@ void ShowFile(
       std::move(file), 0, 0, max_row - oko::StatusWindow::kRows, max_col);
   oko::StatusWindow status_window(
       log_path, max_row - oko::StatusWindow::kRows, 0, max_col);
+  std::optional<oko::AddPatternFilterWindow> add_pattern_filter_window;
 
   bool should_run = true;
   while (should_run) {
@@ -40,13 +45,29 @@ void ShowFile(
     status_window.UpdateStatus(info);
     log_window.Display();
     status_window.Display();
+    if (add_pattern_filter_window) {
+      add_pattern_filter_window->Display();
+    }
     int key = getch();
-    switch (key) {
-      case 'q':
-        should_run = false;
-        break;
-      default:
-        log_window.HandleKeyPress(key);
+    if (add_pattern_filter_window) {
+      add_pattern_filter_window->HandleKeyPress(key);
+    } else {
+      switch (key) {
+        case 'q':
+          should_run = false;
+          break;
+        case 'i':
+          add_pattern_filter_window.emplace(/* is_include_filter */ true);
+          break;
+        case 'e':
+          add_pattern_filter_window.emplace(/* is_include_filter */ false);
+          break;
+        default:
+            log_window.HandleKeyPress(key);
+      }
+    }
+    if (add_pattern_filter_window && add_pattern_filter_window->finished()) {
+      add_pattern_filter_window = std::nullopt;
     }
   }
   endwin();

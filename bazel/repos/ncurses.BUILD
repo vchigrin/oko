@@ -13,7 +13,6 @@ cc_library(
         "include/cursslk.h",
         "include/eti.h",
         "include/etip.h",
-        "include/form.h",
         "include/menu.h",
         "include/nc_tparm.h",
         "include/ncurses_dll.h",
@@ -23,6 +22,17 @@ cc_library(
         "include/termcap.h",
         "include/tic.h",
         "include/unctrl.h",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "forms",
+    srcs = [
+        "lib/x86_64-linux-gnu/libform.so",
+    ],
+    hdrs = [
+        "include/form.h",
     ],
     visibility = ["//visibility:public"],
 )

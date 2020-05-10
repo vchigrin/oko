@@ -1,6 +1,8 @@
 cc_binary(
     name = "oko",
     srcs = [
+        "add_pattern_filter_window.cc",
+        "add_pattern_filter_window.h",
         "log_file.h",
         "log_record.h",
         "log_view.h",
@@ -20,5 +22,6 @@ cc_binary(
         "@boost//:program_options",
         "@libcxx",
         "@ncurses",
+        "@ncurses//:forms",
     ],
 )
