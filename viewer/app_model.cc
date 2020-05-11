@@ -29,4 +29,21 @@ void AppModel::AppendFilter(
   sig_filter_set_changed_(active_filters_);
 }
 
+void AppModel::RemoveAllFilters() noexcept {
+  if (active_filters_.empty()) {
+    return;
+  }
+  active_filters_.clear();
+  sig_filter_set_changed_(active_filters_);
+}
+
+void AppModel::RemoveLastFilter() noexcept {
+  if (active_filters_.empty()) {
+    return;
+  }
+  delete active_filters_.back();
+  active_filters_.pop_back();
+  sig_filter_set_changed_(active_filters_);
+}
+
 }  // namespace oko

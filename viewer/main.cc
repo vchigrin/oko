@@ -57,6 +57,12 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
         case 'e':
           add_pattern_filter_window.emplace(/* is_include_filter */ false);
           break;
+        case '=':
+          model.RemoveAllFilters();
+          break;
+        case '-':
+          model.RemoveLastFilter();
+          break;
         default:
           screen_layout.HandleKeyPress(key);
       }

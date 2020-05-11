@@ -30,6 +30,8 @@ class AppModel {
   void AppendFilter(
       std::string pattern,
       bool is_include_filter) noexcept;
+  void RemoveAllFilters() noexcept;
+  void RemoveLastFilter() noexcept;
 
   const std::vector<oko::LogPatternFilter*>&
       active_filters() const noexcept {
