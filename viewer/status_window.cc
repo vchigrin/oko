@@ -12,24 +12,27 @@
 namespace oko {
 
 StatusWindow::StatusWindow(
-    std::string file_name,
     int start_row,
     int start_col,
     int num_columns) noexcept
-    : Window(start_row, start_col, kRows, num_columns),
-      file_name_(std::move(file_name)) {
+    : Window(start_row, start_col, kRows, num_columns) {
   ColorManager& cm = ColorManager::instance();
   status_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_WHITE);
   status_mark_color_pair_ = cm.RegisterColorPair(COLOR_RED, COLOR_WHITE);
-  wbkgd(window_.get(), COLOR_PAIR(status_color_pair_));
 }
 
 void StatusWindow::DisplayImpl() noexcept {
+  wbkgdset(window_.get(), COLOR_PAIR(status_color_pair_));
   mvwprintw(
       window_.get(),
       0, 0,
-      "File %s\nTotal %lu records.",
-      file_name_.c_str(),
+      "File %s",
+      current_status_.file_name.c_str());
+  wclrtoeol(window_.get());
+  mvwprintw(
+      window_.get(),
+      1, 0,
+      "Total %lu records.",
       current_status_. total_records);
   const uint64_t marked_ms =
       std::chrono::duration_cast<std::chrono::milliseconds>(

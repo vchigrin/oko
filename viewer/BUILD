@@ -18,6 +18,8 @@ cc_binary(
         "memorylog_log_file.cc",
         "memorylog_log_file.h",
         "ncurses_helpers.h",
+        "screen_layout.cc",
+        "screen_layout.h",
         "status_window.cc",
         "status_window.h",
         "window.cc",

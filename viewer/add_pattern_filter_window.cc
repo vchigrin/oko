@@ -27,8 +27,8 @@ AddPatternFilterWindow::AddPatternFilterWindow(bool is_include_filter) noexcept
   const int width = std::min(kDesiredWindowWidth, max_col);
   // Can not shrink vertically.
   const int height = kDesiredWindowHeight;
-  const int start_col = (max_col - width) / 2;
-  const int start_row = (max_row - height) / 2;
+  const int start_col = std::max(0, (max_col - width) / 2);
+  const int start_row = std::max(0, (max_row - height) / 2);
   Move(start_row, start_col, height, width);
   subwindow_.reset(derwin(window_.get(), height - 2, width - 2, 1, 1));
 

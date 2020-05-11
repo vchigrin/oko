@@ -10,11 +10,9 @@
 #include <optional>
 
 #include "viewer/add_pattern_filter_window.h"
-#include "viewer/filters_list_window.h"
-#include "viewer/log_window.h"
 #include "viewer/memorylog_log_file.h"
 #include "viewer/ncurses_helpers.h"
-#include "viewer/status_window.h"
+#include "viewer/screen_layout.h"
 
 namespace po = boost::program_options;
 
@@ -24,33 +22,25 @@ void ShowFile(
   initscr();
   start_color();
   noecho();
+  // Make all characters available immediately as typed.
+  cbreak();
   // Invisible cursor.
   curs_set(0);
   keypad(stdscr, true);
-  int max_row = 0, max_col = 0;
-  getmaxyx(stdscr, max_row, max_col);
   refresh();
-  oko::FilterListWindow filter_list(0, 0, max_col);
-  oko::LogWindow log_window(
-      file.get(),
-      filter_list.GetDesiredHeight(), 0,
-      max_row - oko::StatusWindow::kRows - filter_list.GetDesiredHeight(),
-      max_col);
-  oko::StatusWindow status_window(
-      log_path, max_row - oko::StatusWindow::kRows, 0, max_col);
+  oko::ScreenLayout screen_layout(file.get());
   std::optional<oko::AddPatternFilterWindow> add_pattern_filter_window;
   std::vector<oko::LogPatternFilter*> active_filters;
 
   bool should_run = true;
   while (should_run) {
     oko::StatusInfo info;
-    info.total_records = log_window.total_records();
-    info.marked_records = log_window.marked_records();
-    info.marked_duration = log_window.marked_duration();
-    status_window.UpdateStatus(info);
-    log_window.Display();
-    status_window.Display();
-    filter_list.Display();
+    info.file_name = log_path;
+    info.total_records = screen_layout.log_window().total_records();
+    info.marked_records = screen_layout.log_window().marked_records();
+    info.marked_duration = screen_layout.log_window().marked_duration();
+    screen_layout.status_window().UpdateStatus(info);
+    screen_layout.Display();
     if (add_pattern_filter_window) {
       add_pattern_filter_window->Display();
     }
@@ -69,7 +59,7 @@ void ShowFile(
           add_pattern_filter_window.emplace(/* is_include_filter */ false);
           break;
         default:
-            log_window.HandleKeyPress(key);
+          screen_layout.HandleKeyPress(key);
       }
     }
     if (add_pattern_filter_window && add_pattern_filter_window->finished()) {
@@ -82,18 +72,9 @@ void ShowFile(
             std::move(pattern),
             add_pattern_filter_window->is_include_filter());
         active_filters.push_back(new_filter);
-        filter_list.UpdateActiveFilters(active_filters);
-        log_window.SetView(new_filter);
-        const int filter_window_height =
-            filter_list.GetDesiredHeight();
-        filter_list.Move(
-            0, 0,
-            filter_window_height,
-            max_col);
-        log_window.Move(
-            filter_window_height, 0,
-            max_row - oko::StatusWindow::kRows - filter_window_height,
-            max_col);
+        screen_layout.filter_list_window().UpdateActiveFilters(active_filters);
+        screen_layout.log_window().SetView(new_filter);
+        screen_layout.RecalcPositions();
       }
       add_pattern_filter_window = std::nullopt;
     }

@@ -4,6 +4,7 @@
 
 #pragma once
 #include <string>
+#include <utility>
 
 #include "viewer/log_record.h"
 #include "viewer/window.h"
@@ -12,6 +13,7 @@
 namespace oko {
 
 struct StatusInfo {
+  std::string file_name;
   uint64_t total_records = 0;
   uint64_t marked_records = 0;
   LogRecord::time_point::duration marked_duration;
@@ -23,13 +25,12 @@ class StatusWindow : public Window {
   static constexpr int kRows = 2;
 
   StatusWindow(
-      std::string file_name,
       int start_row,
       int start_col,
       int num_columns) noexcept;
 
-  void UpdateStatus(const StatusInfo& status) noexcept {
-    current_status_ = status;
+  void UpdateStatus(StatusInfo status) noexcept {
+    current_status_ = std::move(status);
   }
 
   void HandleKeyPress(int key) noexcept override;
@@ -37,7 +38,6 @@ class StatusWindow : public Window {
  private:
   void DisplayImpl() noexcept override;
 
-  const std::string file_name_;
   StatusInfo current_status_;
   int status_color_pair_ = 0;
   int status_mark_color_pair_ = 0;
