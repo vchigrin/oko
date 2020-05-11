@@ -4,6 +4,7 @@
 
 #include "viewer/filters_list_window.h"
 
+#include "viewer/color_manager.h"
 #include "viewer/ncurses_helpers.h"
 
 namespace oko {
@@ -13,6 +14,9 @@ FilterListWindow::FilterListWindow(
     int start_col,
     int num_columns) noexcept
     : Window(start_row, start_col, 1, num_columns) {
+  ColorManager& cm = ColorManager::instance();
+  include_filter_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_GREEN);
+  exclude_filter_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_RED);
 }
 
 int FilterListWindow::GetDesiredHeight() noexcept {
@@ -29,8 +33,8 @@ void FilterListWindow::DisplayImpl() noexcept {
   for (LogPatternFilter* filter : active_filters_) {
     wbkgdset(window_.get(),
         filter->is_include_filter() ?
-            COLOR_PAIR(kIncludeFilterColorPair) :
-            COLOR_PAIR(kExcludeFilterColorPair));
+            COLOR_PAIR(include_filter_color_pair_) :
+            COLOR_PAIR(exclude_filter_color_pair_));
     mvwaddstr(window_.get(), cur_row, 0,
         filter->pattern().c_str());
     wclrtoeol(window_.get());

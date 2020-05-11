@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "viewer/color_manager.h"
 #include "viewer/ncurses_helpers.h"
 
 namespace oko {
@@ -17,7 +18,10 @@ StatusWindow::StatusWindow(
     int num_columns) noexcept
     : Window(start_row, start_col, kRows, num_columns),
       file_name_(std::move(file_name)) {
-  wbkgd(window_.get(), COLOR_PAIR(kStatusColorPair));
+  ColorManager& cm = ColorManager::instance();
+  status_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_WHITE);
+  status_mark_color_pair_ = cm.RegisterColorPair(COLOR_RED, COLOR_WHITE);
+  wbkgd(window_.get(), COLOR_PAIR(status_color_pair_));
 }
 
 void StatusWindow::DisplayImpl() noexcept {
@@ -36,7 +40,7 @@ void StatusWindow::DisplayImpl() noexcept {
           std::chrono::milliseconds(marked_ms)).count();
 
   if (current_status_.marked_records > 0) {
-    WithColor color(window_, kStatusMarkColorPair);
+    WithColor color(window_, status_mark_color_pair_);
     wprintw(
         window_.get(),
         " Marked %lu records, %llu.%06llu ms marked",

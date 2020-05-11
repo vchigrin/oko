@@ -39,6 +39,8 @@ class StatusWindow : public Window {
 
   const std::string file_name_;
   StatusInfo current_status_;
+  int status_color_pair_ = 0;
+  int status_mark_color_pair_ = 0;
 };
 
 }  // namespace oko

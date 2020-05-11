@@ -30,7 +30,6 @@ void ShowFile(
   int max_row = 0, max_col = 0;
   getmaxyx(stdscr, max_row, max_col);
   refresh();
-  oko::InitColors();
   oko::FilterListWindow filter_list(0, 0, max_col);
   oko::LogWindow log_window(
       file.get(),

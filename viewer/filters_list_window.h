@@ -31,6 +31,8 @@ class FilterListWindow : public Window {
   void DisplayImpl() noexcept override;
 
   std::vector<LogPatternFilter*> active_filters_;
+  int include_filter_color_pair_ = 0;
+  int exclude_filter_color_pair_ = 0;
 };
 
 }  // namespace oko

@@ -67,6 +67,12 @@ class LogWindow : public Window {
   size_t marked_records_end_ = 0;
   // Whether we're marking region during movement.
   bool marking_ = false;
+  int time_color_pair_ = 0;
+  int debug_color_pair_ = 0;
+  int info_color_pair_ = 0;
+  int warn_color_pair_ = 0;
+  int err_color_pair_ = 0;
+  int mark_color_pair_ = 0;
 };
 
 }  // namespace oko

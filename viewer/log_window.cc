@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "viewer/color_manager.h"
 #include "viewer/ncurses_helpers.h"
 
 namespace oko {
@@ -34,6 +35,13 @@ LogWindow::LogWindow(
     int num_columns) noexcept
     : Window(start_row, start_col, num_rows, num_columns),
       view_(view) {
+  ColorManager& cm = ColorManager::instance();
+  time_color_pair_ = cm.RegisterColorPair(COLOR_YELLOW, COLOR_BLACK);
+  debug_color_pair_ = cm.RegisterColorPair(COLOR_BLUE, COLOR_BLACK);
+  info_color_pair_ = cm.RegisterColorPair(COLOR_GREEN, COLOR_BLACK);
+  warn_color_pair_ = cm.RegisterColorPair(COLOR_YELLOW, COLOR_BLACK);
+  err_color_pair_ = cm.RegisterColorPair(COLOR_RED, COLOR_BLACK);
+  mark_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_RED);
 }
 
 void LogWindow::DisplayImpl() noexcept {
@@ -46,7 +54,7 @@ void LogWindow::DisplayImpl() noexcept {
     }
     const bool is_marked = IsMarked(i);
     if (is_marked) {
-      wattron(window_.get(), COLOR_PAIR(kMarkColorPair));
+      wattron(window_.get(), COLOR_PAIR(mark_color_pair_));
     }
     DisplayTime(is_marked, row, records[i].timestamp());
     mvwaddch(window_.get(), row, kTimeStartCol + kTimeColSize, ' ');
@@ -55,7 +63,7 @@ void LogWindow::DisplayImpl() noexcept {
     DisplayMessage(row, records[i].message());
     wclrtoeol(window_.get());
     if (is_marked) {
-      wattroff(window_.get(), COLOR_PAIR(kMarkColorPair));
+      wattroff(window_.get(), COLOR_PAIR(mark_color_pair_));
     }
     if (row == cursor_line_) {
       wattroff(window_.get(), A_REVERSE);
@@ -99,7 +107,7 @@ void LogWindow::DisplayTime(
   {
     std::optional<WithColor> color;
     if (!is_marked) {
-      color.emplace(window_, kTimeColorPair);
+      color.emplace(window_, time_color_pair_);
     }
     mvwaddstr(
         window_.get(),
@@ -116,19 +124,19 @@ void LogWindow::DisplayLevel(
   switch (level) {
     case LogLevel::Debug:
       level_str = "DEBUG";
-      level_pair = kDebugColorPair;
+      level_pair = debug_color_pair_;
       break;
     case LogLevel::Info:
       level_str = "INFO ";
-      level_pair = kInfoColorPair;
+      level_pair = info_color_pair_;
       break;
     case LogLevel::Warning:
       level_str = "WARN ";
-      level_pair = kWarnColorPair;
+      level_pair = warn_color_pair_;
       break;
     case LogLevel::Error:
       level_str = "ERROR";
-      level_pair = kErrColorPair;
+      level_pair = err_color_pair_;
       break;
     default:
       assert(false);

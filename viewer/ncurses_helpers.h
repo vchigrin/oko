@@ -28,36 +28,4 @@ class WithColor {
   const int pair_;
 };
 
-// Log window
-const int kTimeColorPair = 1;
-const int kDebugColorPair = 2;
-const int kInfoColorPair = 3;
-const int kWarnColorPair = 4;
-const int kErrColorPair = 5;
-const int kMarkColorPair = 6;
-
-// Status window
-const int kStatusColorPair = 7;
-const int kStatusMarkColorPair = 8;
-
-// Filters list window
-const int kIncludeFilterColorPair = 9;
-const int kExcludeFilterColorPair = 10;
-
-
-inline void InitColors() {
-  init_pair(kTimeColorPair, COLOR_YELLOW, COLOR_BLACK);
-  init_pair(kDebugColorPair, COLOR_BLUE, COLOR_BLACK);
-  init_pair(kInfoColorPair, COLOR_GREEN, COLOR_BLACK);
-  init_pair(kWarnColorPair, COLOR_YELLOW, COLOR_BLACK);
-  init_pair(kErrColorPair, COLOR_RED, COLOR_BLACK);
-  init_pair(kMarkColorPair, COLOR_BLACK, COLOR_RED);
-
-  init_pair(kStatusColorPair, COLOR_BLACK, COLOR_WHITE);
-  init_pair(kStatusMarkColorPair, COLOR_RED, COLOR_WHITE);
-
-  init_pair(kIncludeFilterColorPair, COLOR_BLACK, COLOR_GREEN);
-  init_pair(kExcludeFilterColorPair, COLOR_BLACK, COLOR_RED);
-}
-
 }  // namespace oko
