@@ -19,8 +19,10 @@ bool MemorylogLogFile::Parse(const std::string& file_path) noexcept {
   records_.clear();
   mapped_file_ = boost::iostreams::mapped_file(file_path);
   if (!mapped_file_.is_open()) {
+    file_path_ = std::string();
     return false;
   }
+  file_path_ = file_path;
   const std::string_view file_data(mapped_file_.data(), mapped_file_.size());
   size_t pos = 0;
   std::vector<RawRecord> raw_records;

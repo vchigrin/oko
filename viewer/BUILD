@@ -3,6 +3,8 @@ cc_binary(
     srcs = [
         "add_pattern_filter_window.cc",
         "add_pattern_filter_window.h",
+        "app_model.cc",
+        "app_model.h",
         "color_manager.cc",
         "color_manager.h",
         "filters_list_window.cc",

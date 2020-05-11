@@ -16,6 +16,7 @@ class LogFile : public LogView {
   // May create inside memory view of the file, so it is expected
   // that file will not be changed or deleted during lifetime of this object.
   virtual bool Parse(const std::string& file_path) noexcept = 0;
+  virtual const std::string& file_path() const noexcept = 0;
 };
 
 }  // namespace oko

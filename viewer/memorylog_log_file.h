@@ -20,6 +20,9 @@ class MemorylogLogFile : public LogFile {
   const std::vector<LogRecord>& GetRecords() const noexcept override {
     return records_;
   }
+  const std::string& file_path() const noexcept override {
+    return file_path_;
+  }
 
  private:
   struct RawRecord {
@@ -46,6 +49,7 @@ class MemorylogLogFile : public LogFile {
 
   std::vector<LogRecord> records_;
   boost::iostreams::mapped_file_source mapped_file_;
+  std::string file_path_;
 };
 
 }  // namespace oko

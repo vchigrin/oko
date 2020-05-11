@@ -8,10 +8,17 @@
 
 namespace oko {
 
-ScreenLayout::ScreenLayout(LogView* view) noexcept
-    : log_window_(view, 0, 0, 1, 1),
+ScreenLayout::ScreenLayout(AppModel* model) noexcept
+    : app_model_(model),
+      log_window_(model->active_view(), 0, 0, 1, 1),
       filter_list_window_(0, 0, 1),
       status_window_(0, 0, 1) {
+  filter_set_changed_conn_ =
+      app_model_->ConnectFilterSetChanged(
+          std::bind(
+              &ScreenLayout::FilterSetChanged,
+              this,
+              std::placeholders::_1));
   RecalcPositions();
 }
 
@@ -37,6 +44,13 @@ void ScreenLayout::RecalcPositions() noexcept {
 
 void ScreenLayout::HandleKeyPress(int key) noexcept {
   log_window_.HandleKeyPress(key);
+}
+
+void ScreenLayout::FilterSetChanged(
+    const std::vector<LogPatternFilter*>& active_filters) {
+  filter_list_window_.UpdateActiveFilters(active_filters);
+  log_window_.SetView(app_model_->active_view());
+  RecalcPositions();
 }
 
 }  // namespace oko

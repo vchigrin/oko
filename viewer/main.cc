@@ -10,15 +10,14 @@
 #include <optional>
 
 #include "viewer/add_pattern_filter_window.h"
+#include "viewer/app_model.h"
 #include "viewer/memorylog_log_file.h"
 #include "viewer/ncurses_helpers.h"
 #include "viewer/screen_layout.h"
 
 namespace po = boost::program_options;
 
-void ShowFile(
-    const std::string& log_path,
-    std::unique_ptr<oko::MemorylogLogFile> file) {
+void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
   initscr();
   start_color();
   noecho();
@@ -28,14 +27,14 @@ void ShowFile(
   curs_set(0);
   keypad(stdscr, true);
   refresh();
-  oko::ScreenLayout screen_layout(file.get());
+  oko::AppModel model(std::move(file));
+  oko::ScreenLayout screen_layout(&model);
   std::optional<oko::AddPatternFilterWindow> add_pattern_filter_window;
-  std::vector<oko::LogPatternFilter*> active_filters;
 
   bool should_run = true;
   while (should_run) {
     oko::StatusInfo info;
-    info.file_name = log_path;
+    info.file_name = model.file_path();
     info.total_records = screen_layout.log_window().total_records();
     info.marked_records = screen_layout.log_window().marked_records();
     info.marked_duration = screen_layout.log_window().marked_duration();
@@ -65,24 +64,14 @@ void ShowFile(
     if (add_pattern_filter_window && add_pattern_filter_window->finished()) {
       std::string pattern = add_pattern_filter_window->entered_string();
       if (!pattern.empty()) {
-        oko::LogView* last_view = active_filters.empty() ?
-            static_cast<oko::LogView*>(file.get()) : active_filters.back();
-        oko::LogPatternFilter* new_filter = new oko::LogPatternFilter(
-            last_view,
+        model.AppendFilter(
             std::move(pattern),
             add_pattern_filter_window->is_include_filter());
-        active_filters.push_back(new_filter);
-        screen_layout.filter_list_window().UpdateActiveFilters(active_filters);
-        screen_layout.log_window().SetView(new_filter);
-        screen_layout.RecalcPositions();
       }
       add_pattern_filter_window = std::nullopt;
     }
   }
   endwin();
-  for (oko::LogView* v : active_filters) {
-    delete v;
-  }
 }
 
 void AnalyzeFile(const std::string& log_path) noexcept {
@@ -92,7 +81,7 @@ void AnalyzeFile(const std::string& log_path) noexcept {
     std::cerr << "Failed parse file " << log_path << std::endl;
     return;
   }
-  ShowFile(log_path, std::move(file));
+  ShowFile(std::move(file));
 }
 
 int main(int argc, char* argv[]) {
