@@ -22,11 +22,11 @@ void AppModel::AppendFilter(
     std::string pattern,
     bool is_include_filter) noexcept {
   oko::LogPatternFilter* new_filter = new oko::LogPatternFilter(
-      active_view(),
+      &active_view(),
       std::move(pattern),
       is_include_filter);
   active_filters_.push_back(new_filter);
-  sig_filter_set_changed_(active_filters_);
+  FilterSetChanged();
 }
 
 void AppModel::RemoveAllFilters() noexcept {
@@ -34,7 +34,7 @@ void AppModel::RemoveAllFilters() noexcept {
     return;
   }
   active_filters_.clear();
-  sig_filter_set_changed_(active_filters_);
+  FilterSetChanged();
 }
 
 void AppModel::RemoveLastFilter() noexcept {
@@ -43,7 +43,20 @@ void AppModel::RemoveLastFilter() noexcept {
   }
   delete active_filters_.back();
   active_filters_.pop_back();
+  FilterSetChanged();
+}
+
+void AppModel::FilterSetChanged() noexcept {
+  // TODO(vchigrin): Attempt to preserve marked region.
+  marked_records_begin_ = 0;
+  marked_records_end_ = 0;
   sig_filter_set_changed_(active_filters_);
+}
+
+void AppModel::SetMarkedRegion(
+    size_t marked_records_begin, size_t marked_records_end) noexcept {
+  marked_records_begin_ = marked_records_begin;
+  marked_records_end_ = marked_records_end;
 }
 
 }  // namespace oko

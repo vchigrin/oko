@@ -4,20 +4,13 @@
 
 #pragma once
 #include <string>
-#include <utility>
 
+#include "viewer/app_model.h"
 #include "viewer/log_record.h"
 #include "viewer/window.h"
 
 
 namespace oko {
-
-struct StatusInfo {
-  std::string file_name;
-  uint64_t total_records = 0;
-  uint64_t marked_records = 0;
-  LogRecord::time_point::duration marked_duration;
-};
 
 // Always fixed height status window, usually at the bottom of screen.
 class StatusWindow : public Window {
@@ -25,20 +18,17 @@ class StatusWindow : public Window {
   static constexpr int kRows = 2;
 
   StatusWindow(
+      AppModel* model,
       int start_row,
       int start_col,
       int num_columns) noexcept;
 
-  void UpdateStatus(StatusInfo status) noexcept {
-    current_status_ = std::move(status);
-  }
-
   void HandleKeyPress(int key) noexcept override;
 
  private:
+  AppModel* app_model_;
   void DisplayImpl() noexcept override;
 
-  StatusInfo current_status_;
   int status_color_pair_ = 0;
   int status_mark_color_pair_ = 0;
 };

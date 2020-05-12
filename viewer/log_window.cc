@@ -28,13 +28,14 @@ const int kMessageStartCol = kLevelStartCol + kLevelColSize + 1;
 }  // namespace
 
 LogWindow::LogWindow(
-    LogView* view,
+    AppModel* model,
     int start_row,
     int start_col,
     int num_rows,
     int num_columns) noexcept
     : Window(start_row, start_col, num_rows, num_columns),
-      view_(view) {
+      view_(&model->active_view()),
+      app_model_(model) {
   ColorManager& cm = ColorManager::instance();
   time_color_pair_ = cm.RegisterColorPair(COLOR_YELLOW, COLOR_BLACK);
   debug_color_pair_ = cm.RegisterColorPair(COLOR_BLUE, COLOR_BLACK);
@@ -42,6 +43,13 @@ LogWindow::LogWindow(
   warn_color_pair_ = cm.RegisterColorPair(COLOR_YELLOW, COLOR_BLACK);
   err_color_pair_ = cm.RegisterColorPair(COLOR_RED, COLOR_BLACK);
   mark_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_RED);
+
+  filter_set_changed_conn_ =
+      app_model_->ConnectFilterSetChanged(
+          std::bind(
+              &LogWindow::FilterSetChanged,
+              this,
+              std::placeholders::_1));
 }
 
 void LogWindow::DisplayImpl() noexcept {
@@ -52,7 +60,7 @@ void LogWindow::DisplayImpl() noexcept {
     if (row == cursor_line_) {
       wattron(window_.get(), A_REVERSE);
     }
-    const bool is_marked = IsMarked(i);
+    const bool is_marked = app_model_->IsMarked(i);
     if (is_marked) {
       wattron(window_.get(), COLOR_PAIR(mark_color_pair_));
     }
@@ -173,9 +181,9 @@ void LogWindow::HandleKeyPress(int key) noexcept {
     case 'm':
       marking_ = !marking_;
       if (marking_) {
-        marked_records_begin_ = GetRecordUnderCursor();
-        marked_records_end_ = marked_records_begin_ + 1;
-        marked_anchor_record_ = marked_records_begin_;
+        const size_t cur_record = GetRecordUnderCursor();
+        app_model_->SetMarkedRegion(cur_record, cur_record + 1);
+        marked_anchor_record_ = cur_record;
       }
       break;
     case 'j':
@@ -229,11 +237,9 @@ void LogWindow::MaybeExtendMarking() noexcept {
   }
   size_t cur_record = GetRecordUnderCursor();
   if (cur_record < marked_anchor_record_) {
-    marked_records_begin_ = cur_record;
-    marked_records_end_ = marked_anchor_record_ + 1;
+    app_model_->SetMarkedRegion(cur_record, marked_anchor_record_ + 1);
   } else {
-    marked_records_begin_ = marked_anchor_record_;
-    marked_records_end_ = cur_record + 1;
+    app_model_->SetMarkedRegion(marked_anchor_record_, cur_record + 1);
   }
 }
 
@@ -243,16 +249,14 @@ size_t LogWindow::GetDisplayedRecordAfterLast() const noexcept {
       view_->GetRecords().size());
 }
 
-void LogWindow::SetView(LogView* view) noexcept {
-  view_ = view;
+void LogWindow::FilterSetChanged(
+    const std::vector<LogPatternFilter*>&) noexcept {
+  view_ = &app_model_->active_view();
   first_shown_record_ = 0;
   message_horz_offset_ = 0;
   // TODO(vchigrin): Attempt to preserve scroll position.
   cursor_line_ = 0;
   marked_anchor_record_ = 0;
-  // TODO(vchigrin): Attempt to preserve marked region.
-  marked_records_begin_ = 0;
-  marked_records_end_ = 0;
   marking_ = false;
 }
 

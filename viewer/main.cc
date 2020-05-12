@@ -33,12 +33,6 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
 
   bool should_run = true;
   while (should_run) {
-    oko::StatusInfo info;
-    info.file_name = model.file_path();
-    info.total_records = screen_layout.log_window().total_records();
-    info.marked_records = screen_layout.log_window().marked_records();
-    info.marked_duration = screen_layout.log_window().marked_duration();
-    screen_layout.status_window().UpdateStatus(info);
     screen_layout.Display();
     if (add_pattern_filter_window) {
       add_pattern_filter_window->Display();

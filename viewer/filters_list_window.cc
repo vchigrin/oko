@@ -10,13 +10,22 @@
 namespace oko {
 
 FilterListWindow::FilterListWindow(
+    AppModel* model,
     int start_row,
     int start_col,
     int num_columns) noexcept
-    : Window(start_row, start_col, 1, num_columns) {
+    : Window(start_row, start_col, 1, num_columns),
+      app_model_(model) {
   ColorManager& cm = ColorManager::instance();
   include_filter_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_GREEN);
   exclude_filter_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_RED);
+
+  filter_set_changed_conn_ =
+      app_model_->ConnectFilterSetChanged(
+          std::bind(
+              &FilterListWindow::FilterSetChanged,
+              this,
+              std::placeholders::_1));
 }
 
 int FilterListWindow::GetDesiredHeight() noexcept {
@@ -42,6 +51,11 @@ void FilterListWindow::DisplayImpl() noexcept {
   }
   wbkgdset(window_.get(), old_bkgd);
   mvwhline(window_.get(), cur_row, 0, 0, num_columns_);
+}
+
+void FilterListWindow::FilterSetChanged(
+    const std::vector<LogPatternFilter*>& active_filters) noexcept {
+  active_filters_ = active_filters;
 }
 
 }  // namespace oko
