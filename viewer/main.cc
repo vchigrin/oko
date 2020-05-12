@@ -46,10 +46,12 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
           should_run = false;
           break;
         case 'i':
-          add_pattern_filter_dialog.emplace(/* is_include_filter */ true);
+          add_pattern_filter_dialog.emplace(
+              &model, /* is_include_filter */ true);
           break;
         case 'e':
-          add_pattern_filter_dialog.emplace(/* is_include_filter */ false);
+          add_pattern_filter_dialog.emplace(
+              &model, /* is_include_filter */ false);
           break;
         case '=':
           model.RemoveAllFilters();
@@ -62,12 +64,6 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
       }
     }
     if (add_pattern_filter_dialog && add_pattern_filter_dialog->finished()) {
-      std::string pattern = add_pattern_filter_dialog->entered_string();
-      if (!pattern.empty()) {
-        model.AppendFilter(
-            std::move(pattern),
-            add_pattern_filter_dialog->is_include_filter());
-      }
       add_pattern_filter_dialog = std::nullopt;
     }
   }

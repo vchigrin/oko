@@ -8,28 +8,23 @@
 #include <memory>
 #include <string>
 
+#include "viewer/app_model.h"
 #include "viewer/dialog_window.h"
 
 namespace oko {
 
 class AddPatternFilterDialog : public DialogWindow {
  public:
-  explicit AddPatternFilterDialog(bool is_include_filter) noexcept;
-
-  bool is_include_filter() const noexcept {
-    return is_include_filter_;
-  }
-
-  const std::string& entered_string() const noexcept {
-    return entered_string_;
-  }
+  AddPatternFilterDialog(
+      AppModel* model,
+      bool is_include_filter) noexcept;
 
  private:
   bool HandleEnter() noexcept override;
   std::string GetTitle() const noexcept override;
 
+  AppModel* app_model_;
   const bool is_include_filter_;
-  std::string entered_string_;
 };
 
 }  // namespace oko

@@ -5,12 +5,16 @@
 #include "viewer/add_pattern_filter_dialog.h"
 
 #include <algorithm>
+#include <utility>
 #include <boost/algorithm/string/trim.hpp>
 
 namespace oko {
 
-AddPatternFilterDialog::AddPatternFilterDialog(bool is_include_filter) noexcept
+AddPatternFilterDialog::AddPatternFilterDialog(
+    AppModel* model,
+    bool is_include_filter) noexcept
     : DialogWindow(1),
+      app_model_(model),
       is_include_filter_(is_include_filter) {
   fields_[0] = new_field(1, std::max(1, width_ - 4), 1, 1, 0, 0);
   set_field_back(fields_[0], A_REVERSE);
@@ -21,8 +25,13 @@ AddPatternFilterDialog::AddPatternFilterDialog(bool is_include_filter) noexcept
 }
 
 bool AddPatternFilterDialog::HandleEnter() noexcept {
-  entered_string_ = field_buffer(fields_[0], 0);
-  boost::algorithm::trim_right(entered_string_);
+  std::string entered_string = field_buffer(fields_[0], 0);
+  boost::algorithm::trim_right(entered_string);
+  if (!entered_string.empty()) {
+    app_model_->AppendFilter(
+        std::move(entered_string),
+        is_include_filter_);
+  }
   return true;
 }
 
