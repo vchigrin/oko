@@ -11,6 +11,8 @@ cc_binary(
         "dialog_window.h",
         "filters_list_window.cc",
         "filters_list_window.h",
+        "go_to_timestamp_dialog.cc",
+        "go_to_timestamp_dialog.h",
         "log_file.h",
         "log_pattern_filter.cc",
         "log_pattern_filter.h",

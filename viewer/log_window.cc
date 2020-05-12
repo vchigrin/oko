@@ -231,6 +231,49 @@ void LogWindow::HandleKeyPress(int key) noexcept {
   }
 }
 
+LogRecord::time_point LogWindow::GetSelectedRecordTimestamp() const noexcept {
+  size_t cur_record = GetRecordUnderCursor();
+  const auto& records = view_->GetRecords();
+  return records[cur_record].timestamp();
+}
+
+void LogWindow::SelectRecordByTimestamp(LogRecord::time_point tp) noexcept {
+  const auto& records = view_->GetRecords();
+  if (records.empty()) {
+    return;
+  }
+  auto it = std::lower_bound(
+      records.begin(),
+      records.end(),
+      tp,
+      [](const LogRecord& first, const LogRecord::time_point second) {
+        return first.timestamp() < second;
+      });
+  if (it == records.end()) {
+    // Out of range - select last record.
+    --it;
+  } else {
+    if (it != records.begin() && it->timestamp() > tp) {
+      // Select last record with timestamp less then or equal to provided
+      // by user.
+      --it;
+    }
+  }
+  SelectRecordByIndex(it - records.begin());
+}
+
+void LogWindow::SelectRecordByIndex(size_t index) noexcept {
+  const size_t records_count = view_->GetRecords().size();
+  if (index + num_rows_ <= records_count) {
+    first_shown_record_ = index;
+    cursor_line_ = 0;
+  } else {
+    // Last log page
+    first_shown_record_ = records_count - num_rows_;
+    cursor_line_ = index - first_shown_record_;
+  }
+}
+
 void LogWindow::MaybeExtendMarking() noexcept {
   if (!marking_) {
     return;

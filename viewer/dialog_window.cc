@@ -86,6 +86,9 @@ void DialogWindow::HandleKeyPress(int key) noexcept {
         finished_ = true;
       }
       break;
+    case '\t':
+      form_driver(form_.get(), REQ_NEXT_FIELD);
+      break;
     default:
       form_driver(form_.get(), key);
   }

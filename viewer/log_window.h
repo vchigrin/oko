@@ -22,8 +22,13 @@ class LogWindow : public Window {
       int num_columns) noexcept;
   void HandleKeyPress(int key) noexcept override;
 
+  LogRecord::time_point GetSelectedRecordTimestamp() const noexcept;
+  // Select last record with timestamp less then or equal to |tp|.
+  void SelectRecordByTimestamp(LogRecord::time_point tp) noexcept;
+
  private:
   void DisplayImpl() noexcept override;
+  void SelectRecordByIndex(size_t index) noexcept;
   size_t GetDisplayedRecordAfterLast() const noexcept;
   void DisplayMessage(int row, const std::string_view& message) noexcept;
   void DisplayLevel(bool is_marked,

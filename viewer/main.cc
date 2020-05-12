@@ -11,6 +11,7 @@
 
 #include "viewer/add_pattern_filter_dialog.h"
 #include "viewer/app_model.h"
+#include "viewer/go_to_timestamp_dialog.h"
 #include "viewer/memorylog_log_file.h"
 #include "viewer/ncurses_helpers.h"
 #include "viewer/screen_layout.h"
@@ -29,29 +30,31 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
   refresh();
   oko::AppModel model(std::move(file));
   oko::ScreenLayout screen_layout(&model);
-  std::optional<oko::AddPatternFilterDialog> add_pattern_filter_dialog;
+  std::unique_ptr<oko::DialogWindow> current_dialog;
 
   bool should_run = true;
   while (should_run) {
     screen_layout.Display();
-    if (add_pattern_filter_dialog) {
-      add_pattern_filter_dialog->Display();
+    if (current_dialog) {
+      current_dialog->Display();
     }
     int key = getch();
-    if (add_pattern_filter_dialog) {
-      add_pattern_filter_dialog->HandleKeyPress(key);
+    if (current_dialog) {
+      current_dialog->HandleKeyPress(key);
     } else {
       switch (key) {
         case 'q':
           should_run = false;
           break;
         case 'i':
-          add_pattern_filter_dialog.emplace(
-              &model, /* is_include_filter */ true);
+          current_dialog = std::make_unique<oko::AddPatternFilterDialog>(
+              &model,
+              /* is_include_filter */ true);
           break;
         case 'e':
-          add_pattern_filter_dialog.emplace(
-              &model, /* is_include_filter */ false);
+          current_dialog = std::make_unique<oko::AddPatternFilterDialog>(
+              &model,
+              /* is_include_filter */ false);
           break;
         case '=':
           model.RemoveAllFilters();
@@ -59,12 +62,16 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
         case '-':
           model.RemoveLastFilter();
           break;
+        case 'g':
+          current_dialog = std::make_unique<oko::GoToTimestampDialog>(
+              &screen_layout.log_window());
+          break;
         default:
           screen_layout.HandleKeyPress(key);
       }
     }
-    if (add_pattern_filter_dialog && add_pattern_filter_dialog->finished()) {
-      add_pattern_filter_dialog = std::nullopt;
+    if (current_dialog && current_dialog->finished()) {
+      current_dialog.reset();
     }
   }
   endwin();
