@@ -27,8 +27,8 @@ class FilterListWindow : public Window {
  private:
   void FilterSetChanged(
       const std::vector<LogPatternFilter*>& active_filters) noexcept;
-
   void DisplayImpl() noexcept override;
+  void DisplayBorders() noexcept;
 
   AppModel* app_model_;
   boost::signals2::scoped_connection filter_set_changed_conn_;

@@ -22,12 +22,17 @@ Window::Window(int start_row,
 }
 
 void Window::Display() noexcept {
-  DisplayImpl();
-  wrefresh(window_.get());
+  if (visible_) {
+    DisplayImpl();
+    wrefresh(window_.get());
+  }
 }
 
 void Window::Move(
     int start_row, int start_col, int num_rows, int num_columns) noexcept {
+  if (!visible_) {
+    return;
+  }
   assert(start_row >= 0);
   assert(start_col >= 0);
   assert(num_rows > 0);
@@ -38,6 +43,16 @@ void Window::Move(
   num_columns_ = num_columns;
   window_.reset(
       newwin(num_rows_, num_columns_, start_row_, start_col_));
+}
+
+void Window::Hide() noexcept {
+  visible_ = false;
+  window_.reset();
+}
+
+void Window::Show() noexcept {
+  visible_ = true;
+  Move(start_row_, start_col_, num_rows_, num_columns_);
 }
 
 }  // namespace oko

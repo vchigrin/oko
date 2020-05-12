@@ -19,6 +19,8 @@ LogPatternFilter::LogPatternFilter(
         rec.message().find(pattern.c_str()) != std::string_view::npos;
     if (has_pattern == is_include_filter) {
       filtered_records_.emplace_back(rec);
+    } else {
+      ++filtered_records_count_;
     }
   }
 }

@@ -22,6 +22,8 @@ class Window {
   virtual void Move(
       int start_row, int start_col,
       int num_rows, int num_columns) noexcept;
+  virtual void Hide() noexcept;
+  virtual void Show() noexcept;
 
   // Calls DisplayImpl and then wrefresh();
   virtual void Display() noexcept final;
@@ -35,6 +37,7 @@ class Window {
   int start_col_;
   int num_rows_;
   int num_columns_;
+  bool visible_ = true;
 };
 
 }  // namespace oko

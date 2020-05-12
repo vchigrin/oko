@@ -17,6 +17,9 @@ class LogPatternFilter : public LogView {
       const std::string& pattern,
       bool is_include_filter);
   const std::vector<LogRecord>& GetRecords() const noexcept override;
+  size_t filtered_out_records_count() const noexcept {
+    return filtered_records_count_;
+  }
 
   bool is_include_filter() const noexcept {
     return is_include_filter_;
@@ -30,6 +33,7 @@ class LogPatternFilter : public LogView {
   std::vector<LogRecord> filtered_records_;
   const std::string pattern_;
   const bool is_include_filter_;
+  size_t filtered_records_count_ = 0;
 };
 
 }  // namespace oko

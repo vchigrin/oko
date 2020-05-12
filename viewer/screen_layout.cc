@@ -32,7 +32,12 @@ void ScreenLayout::RecalcPositions() noexcept {
   int max_row = 0, max_col = 0;
   getmaxyx(stdscr, max_row, max_col);
   const int filter_window_height = filter_list_window_.GetDesiredHeight();
-  filter_list_window_.Move(0, 0, filter_window_height, max_col);
+  if (filter_window_height > 0) {
+    filter_list_window_.Show();
+    filter_list_window_.Move(0, 0, filter_window_height, max_col);
+  } else {
+    filter_list_window_.Hide();
+  }
   log_window_.Move(
       filter_window_height, 0,
       std::max(1, max_row - StatusWindow::kRows - filter_window_height),
