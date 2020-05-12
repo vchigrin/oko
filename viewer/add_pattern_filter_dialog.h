@@ -8,20 +8,13 @@
 #include <memory>
 #include <string>
 
-#include "viewer/window.h"
+#include "viewer/dialog_window.h"
 
 namespace oko {
 
-class AddPatternFilterWindow : public Window {
+class AddPatternFilterDialog : public DialogWindow {
  public:
-  explicit AddPatternFilterWindow(bool is_include_filter) noexcept;
-  ~AddPatternFilterWindow();
-
-  void HandleKeyPress(int key) noexcept override;
-
-  bool finished() const noexcept {
-    return finished_;
-  }
+  explicit AddPatternFilterDialog(bool is_include_filter) noexcept;
 
   bool is_include_filter() const noexcept {
     return is_include_filter_;
@@ -32,16 +25,11 @@ class AddPatternFilterWindow : public Window {
   }
 
  private:
-  void DisplayImpl() noexcept override;
-
-  std::unique_ptr<WINDOW, int(*)(WINDOW*)> subwindow_;
+  bool HandleEnter() noexcept override;
+  std::string GetTitle() const noexcept override;
 
   const bool is_include_filter_;
-  bool finished_ = false;
   std::string entered_string_;
-  FIELD* fields_[2];
-  std::unique_ptr<FORM, int(*)(FORM*)> form_;
-  int prev_cursor_state_ = 0;
 };
 
 }  // namespace oko

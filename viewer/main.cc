@@ -9,7 +9,7 @@
 #include <iostream>
 #include <optional>
 
-#include "viewer/add_pattern_filter_window.h"
+#include "viewer/add_pattern_filter_dialog.h"
 #include "viewer/app_model.h"
 #include "viewer/memorylog_log_file.h"
 #include "viewer/ncurses_helpers.h"
@@ -29,27 +29,27 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
   refresh();
   oko::AppModel model(std::move(file));
   oko::ScreenLayout screen_layout(&model);
-  std::optional<oko::AddPatternFilterWindow> add_pattern_filter_window;
+  std::optional<oko::AddPatternFilterDialog> add_pattern_filter_dialog;
 
   bool should_run = true;
   while (should_run) {
     screen_layout.Display();
-    if (add_pattern_filter_window) {
-      add_pattern_filter_window->Display();
+    if (add_pattern_filter_dialog) {
+      add_pattern_filter_dialog->Display();
     }
     int key = getch();
-    if (add_pattern_filter_window) {
-      add_pattern_filter_window->HandleKeyPress(key);
+    if (add_pattern_filter_dialog) {
+      add_pattern_filter_dialog->HandleKeyPress(key);
     } else {
       switch (key) {
         case 'q':
           should_run = false;
           break;
         case 'i':
-          add_pattern_filter_window.emplace(/* is_include_filter */ true);
+          add_pattern_filter_dialog.emplace(/* is_include_filter */ true);
           break;
         case 'e':
-          add_pattern_filter_window.emplace(/* is_include_filter */ false);
+          add_pattern_filter_dialog.emplace(/* is_include_filter */ false);
           break;
         case '=':
           model.RemoveAllFilters();
@@ -61,14 +61,14 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
           screen_layout.HandleKeyPress(key);
       }
     }
-    if (add_pattern_filter_window && add_pattern_filter_window->finished()) {
-      std::string pattern = add_pattern_filter_window->entered_string();
+    if (add_pattern_filter_dialog && add_pattern_filter_dialog->finished()) {
+      std::string pattern = add_pattern_filter_dialog->entered_string();
       if (!pattern.empty()) {
         model.AppendFilter(
             std::move(pattern),
-            add_pattern_filter_window->is_include_filter());
+            add_pattern_filter_dialog->is_include_filter());
       }
-      add_pattern_filter_window = std::nullopt;
+      add_pattern_filter_dialog = std::nullopt;
     }
   }
   endwin();

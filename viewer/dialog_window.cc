@@ -2,11 +2,9 @@
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
 
-#include "viewer/add_pattern_filter_window.h"
+#include "viewer/dialog_window.h"
 
 #include <algorithm>
-#include <boost/algorithm/string/trim.hpp>
-#include <iostream>
 
 namespace oko {
 
@@ -17,56 +15,51 @@ const int kDesiredWindowHeight = 5;
 
 }  // namespace
 
-AddPatternFilterWindow::AddPatternFilterWindow(bool is_include_filter) noexcept
+DialogWindow::DialogWindow(size_t field_count) noexcept
     : Window(1, 1, 1, 1),
       subwindow_(nullptr, &delwin),
-      is_include_filter_(is_include_filter),
+      fields_(field_count + 1, nullptr),
       form_(nullptr, &free_form) {
   int max_row = 0, max_col = 0;
   getmaxyx(stdscr, max_row, max_col);
-  const int width = std::min(kDesiredWindowWidth, max_col);
+  width_ = std::min(kDesiredWindowWidth, max_col);
   // Can not shrink vertically.
-  const int height = kDesiredWindowHeight;
-  const int start_col = std::max(0, (max_col - width) / 2);
-  const int start_row = std::max(0, (max_row - height) / 2);
-  Move(start_row, start_col, height, width);
-  subwindow_.reset(derwin(window_.get(), height - 2, width - 2, 1, 1));
+  height_ = kDesiredWindowHeight;
+  const int start_col = std::max(0, (max_col - width_) / 2);
+  const int start_row = std::max(0, (max_row - height_) / 2);
+  Move(start_row, start_col, height_, width_);
+  subwindow_.reset(derwin(window_.get(), height_ - 2, width_ - 2, 1, 1));
+  // Very visible cursor
+  prev_cursor_state_ = curs_set(2);
+}
 
-  fields_[0] = new_field(1, std::max(1, width - 4), 1, 1, 0, 0);
-  set_field_back(fields_[0], A_REVERSE);
-  // Make field dynamically resizing to allow strings longer then
-  // field width.
-  field_opts_off(fields_[0], O_STATIC);
-  fields_[1] = nullptr;
-  form_.reset(new_form(fields_));
+void DialogWindow::InitForm() noexcept {
+  form_.reset(new_form(fields_.data()));
   set_form_win(form_.get(), window_.get());
   set_form_sub(form_.get(), subwindow_.get());
   post_form(form_.get());
-  // Very visible cursor
-  prev_cursor_state_ = curs_set(2);
   refresh();
 }
 
-AddPatternFilterWindow::~AddPatternFilterWindow() {
+DialogWindow::~DialogWindow() {
   unpost_form(form_.get());
   free_field(fields_[0]);
   curs_set(prev_cursor_state_);
 }
 
-void AddPatternFilterWindow::DisplayImpl() noexcept {
+void DialogWindow::DisplayImpl() noexcept {
   box(window_.get(), 0, 0);
-  const std::string label = is_include_filter_ ?
-      " Include fields with pattern " :
-      " Exlude fields with pattern ";
+  std::string title = GetTitle();
+  title = " " + title + " ";
   int max_x = getmaxx(window_.get());
-  int label_x = std::max(0, max_x - static_cast<int>(label.length())) / 2;
+  int title_x = std::max(0, max_x - static_cast<int>(title.length())) / 2;
   int y = 0, x = 0;
   getyx(window_.get(), y, x);
-  mvwaddstr(window_.get(), 0, label_x, label.c_str());
+  mvwaddstr(window_.get(), 0, title_x, title.c_str());
   wmove(window_.get(), y, x);
 }
 
-void AddPatternFilterWindow::HandleKeyPress(int key) noexcept {
+void DialogWindow::HandleKeyPress(int key) noexcept {
   switch (key) {
     case KEY_HOME:
       form_driver(form_.get(), REQ_BEG_LINE);
@@ -88,10 +81,10 @@ void AddPatternFilterWindow::HandleKeyPress(int key) noexcept {
       break;
     case KEY_ENTER:
     case '\n':
-      finished_ = true;
       form_driver(form_.get(), REQ_VALIDATION);
-      entered_string_ = field_buffer(fields_[0], 0);
-      boost::algorithm::trim_right(entered_string_);
+      if (HandleEnter()) {
+        finished_ = true;
+      }
       break;
     default:
       form_driver(form_.get(), key);

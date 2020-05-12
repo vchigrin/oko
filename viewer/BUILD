@@ -1,12 +1,14 @@
 cc_binary(
     name = "oko",
     srcs = [
-        "add_pattern_filter_window.cc",
-        "add_pattern_filter_window.h",
+        "add_pattern_filter_dialog.cc",
+        "add_pattern_filter_dialog.h",
         "app_model.cc",
         "app_model.h",
         "color_manager.cc",
         "color_manager.h",
+        "dialog_window.cc",
+        "dialog_window.h",
         "filters_list_window.cc",
         "filters_list_window.h",
         "log_file.h",
