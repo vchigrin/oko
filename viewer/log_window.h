@@ -22,13 +22,8 @@ class LogWindow : public Window {
       int num_columns) noexcept;
   void HandleKeyPress(int key) noexcept override;
 
-  LogRecord::time_point GetSelectedRecordTimestamp() const noexcept;
-  // Select last record with timestamp less then or equal to |tp|.
-  void SelectRecordByTimestamp(LogRecord::time_point tp) noexcept;
-
  private:
   void DisplayImpl() noexcept override;
-  void SelectRecordByIndex(size_t index) noexcept;
   size_t GetDisplayedRecordAfterLast() const noexcept;
   void DisplayMessage(int row, const std::string_view& message) noexcept;
   void DisplayLevel(bool is_marked,
@@ -36,17 +31,15 @@ class LogWindow : public Window {
   void DisplayTime(bool is_marked,
       int row, const LogRecord::time_point time_point) noexcept;
   void MaybeExtendMarking() noexcept;
-  size_t GetRecordUnderCursor() const noexcept {
-    return first_shown_record_ + cursor_line_;
-  }
   void FilterSetChanged(const std::vector<LogPatternFilter*>&) noexcept;
+  void SelectedRecordChanged(size_t selected_record) noexcept;
 
   const LogView* view_;
   AppModel* app_model_;
   boost::signals2::connection filter_set_changed_conn_;
+  boost::signals2::connection selected_record_changed_conn_;
   size_t first_shown_record_ = 0;
   size_t message_horz_offset_ = 0;
-  int cursor_line_ = 0;
   // Record where marking was started - acts as anchor for updating
   // marked region.
   size_t marked_anchor_record_ = 0;

@@ -50,14 +50,22 @@ LogWindow::LogWindow(
               &LogWindow::FilterSetChanged,
               this,
               std::placeholders::_1));
+
+  selected_record_changed_conn_ =
+      app_model_->ConnectSelectedRecordChanged(
+          std::bind(
+              &LogWindow::SelectedRecordChanged,
+              this,
+              std::placeholders::_1));
 }
 
 void LogWindow::DisplayImpl() noexcept {
   const size_t after_last_record = GetDisplayedRecordAfterLast();
   const std::vector<LogRecord>& records = view_->GetRecords();
+  const size_t selected_record = app_model_->selected_record();
   for (size_t i = first_shown_record_, row = 0;
       i < after_last_record; ++i, ++row) {
-    if (row == cursor_line_) {
+    if (i == selected_record) {
       wattron(window_.get(), A_REVERSE);
     }
     const bool is_marked = app_model_->IsMarked(i);
@@ -73,7 +81,7 @@ void LogWindow::DisplayImpl() noexcept {
     if (is_marked) {
       wattroff(window_.get(), COLOR_PAIR(mark_color_pair_));
     }
-    if (row == cursor_line_) {
+    if (i == selected_record) {
       wattroff(window_.get(), A_REVERSE);
     }
   }
@@ -176,39 +184,22 @@ void LogWindow::DisplayMessage(
 }
 
 void LogWindow::HandleKeyPress(int key) noexcept {
-  const std::vector<LogRecord>& records = view_->GetRecords();
   switch (key) {
     case 'm':
       marking_ = !marking_;
       if (marking_) {
-        const size_t cur_record = GetRecordUnderCursor();
+        const size_t cur_record = app_model_->selected_record();
         app_model_->SetMarkedRegion(cur_record, cur_record + 1);
         marked_anchor_record_ = cur_record;
       }
       break;
     case 'j':
     case KEY_DOWN:
-      if (cursor_line_ < (num_rows_ - 1)) {
-        if (cursor_line_ + first_shown_record_ + 1 < records.size()) {
-          ++cursor_line_;
-        }
-      } else {
-        if (GetDisplayedRecordAfterLast() < records.size()) {
-          ++first_shown_record_;
-        }
-      }
-      MaybeExtendMarking();
+      app_model_->TrySelectNextRecord();
       break;
     case 'k':
     case KEY_UP:
-      if (cursor_line_ > 0) {
-        --cursor_line_;
-      } else {
-        if (first_shown_record_ > 0) {
-          --first_shown_record_;
-        }
-      }
-      MaybeExtendMarking();
+      app_model_->TrySelectPrevRecord();
       break;
     case 'h':
     case KEY_LEFT:
@@ -220,57 +211,6 @@ void LogWindow::HandleKeyPress(int key) noexcept {
     case KEY_RIGHT:
       ++message_horz_offset_;
       break;
-    case 'G':
-      if (records.size() > static_cast<size_t>(num_rows_)) {
-        first_shown_record_ = records.size() - num_rows_;
-        cursor_line_ = num_rows_ - 1;
-      } else {
-        cursor_line_ = static_cast<int>(records.size()) - 1;
-      }
-      break;
-  }
-}
-
-LogRecord::time_point LogWindow::GetSelectedRecordTimestamp() const noexcept {
-  size_t cur_record = GetRecordUnderCursor();
-  const auto& records = view_->GetRecords();
-  return records[cur_record].timestamp();
-}
-
-void LogWindow::SelectRecordByTimestamp(LogRecord::time_point tp) noexcept {
-  const auto& records = view_->GetRecords();
-  if (records.empty()) {
-    return;
-  }
-  auto it = std::lower_bound(
-      records.begin(),
-      records.end(),
-      tp,
-      [](const LogRecord& first, const LogRecord::time_point second) {
-        return first.timestamp() < second;
-      });
-  if (it == records.end()) {
-    // Out of range - select last record.
-    --it;
-  } else {
-    if (it != records.begin() && it->timestamp() > tp) {
-      // Select last record with timestamp less then or equal to provided
-      // by user.
-      --it;
-    }
-  }
-  SelectRecordByIndex(it - records.begin());
-}
-
-void LogWindow::SelectRecordByIndex(size_t index) noexcept {
-  const size_t records_count = view_->GetRecords().size();
-  if (index + num_rows_ <= records_count) {
-    first_shown_record_ = index;
-    cursor_line_ = 0;
-  } else {
-    // Last log page
-    first_shown_record_ = records_count - num_rows_;
-    cursor_line_ = index - first_shown_record_;
   }
 }
 
@@ -278,7 +218,7 @@ void LogWindow::MaybeExtendMarking() noexcept {
   if (!marking_) {
     return;
   }
-  size_t cur_record = GetRecordUnderCursor();
+  size_t cur_record = app_model_->selected_record();
   if (cur_record < marked_anchor_record_) {
     app_model_->SetMarkedRegion(cur_record, marked_anchor_record_ + 1);
   } else {
@@ -288,7 +228,7 @@ void LogWindow::MaybeExtendMarking() noexcept {
 
 size_t LogWindow::GetDisplayedRecordAfterLast() const noexcept {
   return std::min(
-      first_shown_record_ + num_rows_ + 1,
+      first_shown_record_ + num_rows_,
       view_->GetRecords().size());
 }
 
@@ -297,10 +237,18 @@ void LogWindow::FilterSetChanged(
   view_ = &app_model_->active_view();
   first_shown_record_ = 0;
   message_horz_offset_ = 0;
-  // TODO(vchigrin): Attempt to preserve scroll position.
-  cursor_line_ = 0;
   marked_anchor_record_ = 0;
   marking_ = false;
+}
+
+void LogWindow::SelectedRecordChanged(size_t selected_record) noexcept {
+  if (selected_record >= GetDisplayedRecordAfterLast()) {
+    first_shown_record_ = std::max<int>(0, selected_record - num_rows_ + 1);
+  }
+  if (selected_record < first_shown_record_) {
+    first_shown_record_ = selected_record;
+  }
+  MaybeExtendMarking();
 }
 
 }  // namespace oko

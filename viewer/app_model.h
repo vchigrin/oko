@@ -57,6 +57,14 @@ class AppModel {
     return index >= marked_records_begin_ && index < marked_records_end_;
   }
 
+  void SetSelectedRecord(size_t index) noexcept;
+  void TrySelectNextRecord() noexcept;
+  void TrySelectPrevRecord() noexcept;
+
+  size_t selected_record() const noexcept {
+    return selected_record_;
+  }
+
   LogRecord::time_point::duration marked_duration() const noexcept {
     if (marked_records_end_ == marked_records_begin_) {
       return {};
@@ -68,11 +76,21 @@ class AppModel {
 
   using FilterSetChangedSignature = void (
       const std::vector<oko::LogPatternFilter*>&);
+  // Argument is new |selected_record()| value.
+  using SelectedRecordChangedSignature = void (size_t);
 
   boost::signals2::connection ConnectFilterSetChanged(
       boost::signals2::slot<FilterSetChangedSignature> slot) noexcept {
     return sig_filter_set_changed_.connect(slot);
   }
+  boost::signals2::connection ConnectSelectedRecordChanged(
+      boost::signals2::slot<SelectedRecordChangedSignature> slot) noexcept {
+    return sig_selected_record_changed_.connect(slot);
+  }
+
+  // Select last record with timestamp less then or equal to |tp|.
+  void SelectRecordByTimestamp(LogRecord::time_point tp) noexcept;
+  LogRecord::time_point GetSelectedRecordTimestamp() const noexcept;
 
  private:
   void FilterSetChanged() noexcept;
@@ -83,8 +101,11 @@ class AppModel {
   size_t marked_records_begin_ = 0;
   // One plus index of last marked record.
   size_t marked_records_end_ = 0;
+  size_t selected_record_ = 0;
 
   boost::signals2::signal<FilterSetChangedSignature> sig_filter_set_changed_;
+  boost::signals2::signal<SelectedRecordChangedSignature>
+      sig_selected_record_changed_;
 };
 
 }  // namespace oko

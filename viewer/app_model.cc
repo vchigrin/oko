@@ -4,6 +4,8 @@
 
 #include "viewer/app_model.h"
 
+#include <algorithm>
+#include <cassert>
 #include <utility>
 
 namespace oko {
@@ -50,6 +52,8 @@ void AppModel::FilterSetChanged() noexcept {
   // TODO(vchigrin): Attempt to preserve marked region.
   marked_records_begin_ = 0;
   marked_records_end_ = 0;
+  // TODO(vchigrin): Attempt to preserve scroll position.
+  selected_record_ = 0;
   sig_filter_set_changed_(active_filters_);
 }
 
@@ -57,6 +61,58 @@ void AppModel::SetMarkedRegion(
     size_t marked_records_begin, size_t marked_records_end) noexcept {
   marked_records_begin_ = marked_records_begin;
   marked_records_end_ = marked_records_end;
+}
+
+void AppModel::SetSelectedRecord(size_t index) noexcept {
+  assert(index < active_view().GetRecords().size());
+  selected_record_ = index;
+  sig_selected_record_changed_(index);
+}
+
+void AppModel::TrySelectNextRecord() noexcept {
+  const auto& records = active_view().GetRecords();
+  if (selected_record_ + 1 < records.size()) {
+    SetSelectedRecord(selected_record_ + 1);
+  }
+}
+
+void AppModel::TrySelectPrevRecord() noexcept {
+  if (selected_record_ > 0) {
+    SetSelectedRecord(selected_record_ - 1);
+  }
+}
+
+LogRecord::time_point AppModel::GetSelectedRecordTimestamp() const noexcept {
+  const auto& records = active_view().GetRecords();
+  if (records.empty()) {
+    return LogRecord::time_point{};
+  }
+  return records[selected_record_].timestamp();
+}
+
+void AppModel::SelectRecordByTimestamp(LogRecord::time_point tp) noexcept {
+  const auto& records = active_view().GetRecords();
+  if (records.empty()) {
+    return;
+  }
+  auto it = std::lower_bound(
+      records.begin(),
+      records.end(),
+      tp,
+      [](const LogRecord& first, const LogRecord::time_point second) {
+        return first.timestamp() < second;
+      });
+  if (it == records.end()) {
+    // Out of range - select last record.
+    --it;
+  } else {
+    if (it != records.begin() && it->timestamp() > tp) {
+      // Select last record with timestamp less then or equal to provided
+      // by user.
+      --it;
+    }
+  }
+  SetSelectedRecord(it - records.begin());
 }
 
 }  // namespace oko

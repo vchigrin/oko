@@ -8,21 +8,21 @@
 #include <optional>
 #include <string>
 
+#include "viewer/app_model.h"
 #include "viewer/dialog_window.h"
-#include "viewer/log_window.h"
 
 namespace oko {
 
 class GoToTimestampDialog : public DialogWindow {
  public:
-  explicit GoToTimestampDialog(LogWindow* log_window) noexcept;
+  explicit GoToTimestampDialog(AppModel* model) noexcept;
 
  private:
   void DisplayImpl() noexcept override;
   bool HandleEnter() noexcept override;
   std::string GetTitle() const noexcept override;
 
-  LogWindow* log_window_;
+  AppModel* app_model_;
   int margin_ = 0;
 };
 

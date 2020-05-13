@@ -9,8 +9,6 @@
 #include <charconv>
 #include <limits>
 
-#include "viewer/app_model.h"
-
 namespace oko {
 
 namespace {
@@ -19,9 +17,9 @@ const std::string_view kSecondsLabel = "S:";
 const std::string_view kNanoSecondsLabel = " NS:";
 }  // namespace
 
-GoToTimestampDialog::GoToTimestampDialog(LogWindow* log_window) noexcept
+GoToTimestampDialog::GoToTimestampDialog(AppModel* model) noexcept
     : DialogWindow(2),
-      log_window_(log_window) {
+      app_model_(model) {
   margin_ = std::max<int>(
       0,
       width_ - 2 * kFieldWidth - kSecondsLabel.size() -
@@ -40,7 +38,7 @@ GoToTimestampDialog::GoToTimestampDialog(LogWindow* log_window) noexcept
   field_opts_off(fields_[1], O_AUTOSKIP);
 
   LogRecord::time_point selected_time_point =
-      log_window_->GetSelectedRecordTimestamp();
+      app_model_->GetSelectedRecordTimestamp();
   int sec_nsec[2];
   sec_nsec[0] = std::chrono::duration_cast<std::chrono::seconds>(
       selected_time_point.time_since_epoch()).count();
@@ -82,7 +80,7 @@ bool GoToTimestampDialog::HandleEnter() noexcept {
   LogRecord::time_point tp = LogRecord::time_point() +
       std::chrono::seconds(sec_nsec[0]) +
           std::chrono::nanoseconds(sec_nsec[1]);
-  log_window_->SelectRecordByTimestamp(tp);
+  app_model_->SelectRecordByTimestamp(tp);
   return true;
 }
 

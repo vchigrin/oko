@@ -63,8 +63,7 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
           model.RemoveLastFilter();
           break;
         case 'g':
-          current_dialog = std::make_unique<oko::GoToTimestampDialog>(
-              &screen_layout.log_window());
+          current_dialog = std::make_unique<oko::GoToTimestampDialog>(&model);
           break;
         default:
           screen_layout.HandleKeyPress(key);
