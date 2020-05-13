@@ -12,6 +12,7 @@ namespace {
 
 const int kDesiredWindowWidth = 70;
 const int kDesiredWindowHeight = 5;
+const int kEscape = 27;
 
 }  // namespace
 
@@ -88,6 +89,9 @@ void DialogWindow::HandleKeyPress(int key) noexcept {
       break;
     case '\t':
       form_driver(form_.get(), REQ_NEXT_FIELD);
+      break;
+    case kEscape:
+      finished_ = true;
       break;
     default:
       form_driver(form_.get(), key);
