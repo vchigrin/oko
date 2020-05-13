@@ -26,6 +26,8 @@ cc_binary(
         "ncurses_helpers.h",
         "screen_layout.cc",
         "screen_layout.h",
+        "search_dialog.cc",
+        "search_dialog.h",
         "status_window.cc",
         "status_window.h",
         "window.cc",

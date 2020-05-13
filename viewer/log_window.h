@@ -51,6 +51,7 @@ class LogWindow : public Window {
   int warn_color_pair_ = 0;
   int err_color_pair_ = 0;
   int mark_color_pair_ = 0;
+  int search_text_color_pair_ = 0;
 };
 
 }  // namespace oko

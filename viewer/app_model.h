@@ -65,6 +65,14 @@ class AppModel {
   void TrySelectNextRecord() noexcept;
   void TrySelectPrevRecord() noexcept;
 
+  void SearchForMessage(std::string text) noexcept;
+  void SearchNextEntry() noexcept;
+  void SearchPrevEntry() noexcept;
+
+  const std::string& search_text() const noexcept {
+    return search_text_;
+  }
+
   size_t selected_record() const noexcept {
     return selected_record_;
   }
@@ -106,6 +114,8 @@ class AppModel {
   // One plus index of last marked record.
   size_t marked_records_end_ = 0;
   size_t selected_record_ = 0;
+
+  std::string search_text_;
 
   boost::signals2::signal<FilterSetChangedSignature> sig_filter_set_changed_;
   boost::signals2::signal<SelectedRecordChangedSignature>

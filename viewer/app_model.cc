@@ -115,4 +115,63 @@ void AppModel::SelectRecordByTimestamp(LogRecord::time_point tp) noexcept {
   SetSelectedRecord(it - records.begin());
 }
 
+void AppModel::SearchForMessage(std::string text) noexcept {
+  search_text_ = std::move(text);
+  const auto& records = active_view().GetRecords();
+  if (records.empty() || search_text_.empty()) {
+    return;
+  }
+  auto it = std::find_if(
+      records.begin() + selected_record_,
+      records.end(),
+      [&txt = search_text_](const LogRecord& r) {
+        return r.message().find(txt) != std::string_view::npos;
+      });
+  if (it != records.end()) {
+    SetSelectedRecord(it - records.begin());
+  }
+}
+
+void AppModel::SearchNextEntry() noexcept {
+  const auto& records = active_view().GetRecords();
+  if (records.empty() || search_text_.empty()) {
+    return;
+  }
+  if (selected_record_ + 1 >= records.size()) {
+    // Already at last record.
+    return;
+  }
+
+  auto it = std::find_if(
+      records.begin() + selected_record_ + 1,
+      records.end(),
+      [&txt = search_text_](const LogRecord& r) {
+        return r.message().find(txt) != std::string_view::npos;
+      });
+  if (it != records.end()) {
+    SetSelectedRecord(it - records.begin());
+  }
+}
+
+void AppModel::SearchPrevEntry() noexcept {
+  const auto& records = active_view().GetRecords();
+  if (records.empty() || search_text_.empty()) {
+    return;
+  }
+  if (selected_record_ == 0) {
+    // Already at first record.
+    return;
+  }
+
+  auto it = std::find_if(
+      std::make_reverse_iterator(records.begin() + selected_record_),
+      records.rend(),
+      [&txt = search_text_](const LogRecord& r) {
+        return r.message().find(txt) != std::string_view::npos;
+      });
+  if (it != records.rend()) {
+    SetSelectedRecord(it.base() - records.begin() - 1);
+  }
+}
+
 }  // namespace oko

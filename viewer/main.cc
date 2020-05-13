@@ -15,6 +15,7 @@
 #include "viewer/memorylog_log_file.h"
 #include "viewer/ncurses_helpers.h"
 #include "viewer/screen_layout.h"
+#include "viewer/search_dialog.h"
 
 namespace po = boost::program_options;
 
@@ -64,6 +65,15 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
           break;
         case 'g':
           current_dialog = std::make_unique<oko::GoToTimestampDialog>(&model);
+          break;
+        case '/':
+          current_dialog = std::make_unique<oko::SearchDialog>(&model);
+          break;
+        case 'n':
+          model.SearchNextEntry();
+          break;
+        case 'N':
+          model.SearchPrevEntry();
           break;
         default:
           screen_layout.HandleKeyPress(key);

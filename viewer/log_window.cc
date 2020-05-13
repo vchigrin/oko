@@ -9,6 +9,7 @@
 #include <charconv>
 #include <chrono>
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -43,6 +44,7 @@ LogWindow::LogWindow(
   warn_color_pair_ = cm.RegisterColorPair(COLOR_YELLOW, COLOR_BLACK);
   err_color_pair_ = cm.RegisterColorPair(COLOR_RED, COLOR_BLACK);
   mark_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_RED);
+  search_text_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_YELLOW);
 
   filter_set_changed_conn_ =
       app_model_->ConnectFilterSetChanged(
@@ -176,11 +178,35 @@ void LogWindow::DisplayMessage(
     return;
   }
   std::string_view part_to_display = message.substr(message_horz_offset_);
-  mvwaddnstr(
-      window_.get(),
-      row, kMessageStartCol,
-      part_to_display.data(),
-      part_to_display.size());
+  const std::string& search_text = app_model_->search_text();
+  size_t search_index = part_to_display.find(search_text);
+  if (search_text.empty() || search_index == std::string_view::npos) {
+    mvwaddnstr(
+        window_.get(),
+        row, kMessageStartCol,
+        part_to_display.data(),
+        part_to_display.size());
+  } else {
+    wmove(window_.get(), row, kMessageStartCol);
+    while (!part_to_display.empty()) {
+      waddnstr(
+          window_.get(),
+          part_to_display.data(),
+          search_index);
+      if (search_index != std::string_view::npos) {
+        WithColor colorer(window_, search_text_color_pair_);
+        waddnstr(
+            window_.get(),
+            part_to_display.data() + search_index,
+            search_text.size());
+        part_to_display = part_to_display.substr(
+            search_index + search_text.size());
+        search_index = part_to_display.find(search_text);
+      } else {
+        break;
+      }
+    }
+  }
 }
 
 void LogWindow::HandleKeyPress(int key) noexcept {
