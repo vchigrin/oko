@@ -27,6 +27,18 @@ class AppModel {
     }
   }
 
+  size_t unfiltered_records_count() const noexcept {
+    return file_->GetRecords().size();
+  }
+
+  size_t marked_records_count() const noexcept {
+    return marked_records_end_ - marked_records_begin_;
+  }
+
+  size_t filtered_records_count() const noexcept {
+    return active_view().GetRecords().size();
+  }
+
   void AppendFilter(
       std::string pattern,
       bool is_include_filter) noexcept;
@@ -40,14 +52,6 @@ class AppModel {
 
   const std::string& file_path() const noexcept {
     return file_->file_path();
-  }
-
-  uint64_t marked_records_count() const noexcept {
-    return marked_records_end_ - marked_records_begin_;
-  }
-
-  uint64_t total_records_count() const noexcept {
-    return active_view().GetRecords().size();
   }
 
   void SetMarkedRegion(

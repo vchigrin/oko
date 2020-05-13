@@ -4,6 +4,8 @@
 
 #include "viewer/status_window.h"
 
+#include <algorithm>
+#include <boost/format.hpp>
 #include <utility>
 
 #include "viewer/color_manager.h"
@@ -25,17 +27,32 @@ StatusWindow::StatusWindow(
 
 void StatusWindow::DisplayImpl() noexcept {
   wbkgdset(window_.get(), COLOR_PAIR(status_color_pair_));
-  mvwprintw(
-      window_.get(),
-      0, 0,
-      "File %s",
-      app_model_->file_path().c_str());
+  const int max_x = getmaxx(window_.get());
+
+  // Right-justify total records text.
+  const std::string total_records_text = boost::str(
+      boost::format(" %1% records") % app_model_->unfiltered_records_count());
+  const int total_records_x = std::max<int>(
+      0, max_x - total_records_text.size());
+
+  if (total_records_x > 0) {
+    std::string file_name = app_model_->file_path();
+    const char* displayed_part = file_name.c_str();
+    if (total_records_x < file_name.size()) {
+      // End patf of file name is more interesting.
+      displayed_part += (file_name.size() - total_records_x);
+    }
+    mvwaddstr(
+        window_.get(),
+        0, 0,
+        displayed_part);
+  }
+
   wclrtoeol(window_.get());
-  mvwprintw(
+  mvwaddstr(
       window_.get(),
-      1, 0,
-      "Total %lu records.",
-      app_model_->total_records_count());
+      0, total_records_x,
+      total_records_text.c_str());
 
   const auto marked_records_count = app_model_->marked_records_count();
   if (marked_records_count > 0) {
@@ -48,14 +65,28 @@ void StatusWindow::DisplayImpl() noexcept {
             marked_duration -
             std::chrono::milliseconds(marked_ms)).count();
     WithColor color(window_, status_mark_color_pair_);
-    wprintw(
+    mvwprintw(
         window_.get(),
-        " Marked %lu records, %llu.%06llu ms marked",
+        1, 0,
+        "Marked %zi records, %llu.%06llu ms",
         marked_records_count,
         marked_ms,
         marked_ns);
+  } else {
+    wmove(window_.get(), 1, 0);
   }
   wclrtoeol(window_.get());
+
+  // Right-justify current position text.
+  const std::string cur_pos_text = boost::str(boost::format(
+      "Record %1%/%2%") %
+      app_model_->selected_record() %
+      app_model_->filtered_records_count());
+  const int cur_pos_x = std::max<int>(0, max_x - cur_pos_text.length());
+  mvwaddstr(
+      window_.get(),
+      1, cur_pos_x,
+      cur_pos_text.c_str());
 }
 
 void StatusWindow::HandleKeyPress(int key) noexcept {
