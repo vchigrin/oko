@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <cassert>
 #include <chrono>
 #include <string_view>
 
@@ -10,6 +11,7 @@
 namespace oko {
 
 enum class LogLevel {
+  Invalid,  // Never appears in LogRecords.
   Debug,
   Info,
   Warning,
@@ -28,7 +30,9 @@ class LogRecord {
       std::string_view message) noexcept
      : timestamp_(timestamp),
        log_level_(log_level),
-       message_(message) {}
+       message_(message) {
+    assert(log_level != LogLevel::Invalid);
+  }
 
   LogLevel log_level() const noexcept {
     return log_level_;
@@ -43,9 +47,9 @@ class LogRecord {
   }
 
  private:
-  const time_point timestamp_;
-  const LogLevel log_level_;
-  const std::string_view message_;
+  time_point timestamp_;
+  LogLevel log_level_;
+  std::string_view message_;
 };
 
 

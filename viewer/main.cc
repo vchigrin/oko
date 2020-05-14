@@ -16,10 +16,11 @@
 #include "viewer/ncurses_helpers.h"
 #include "viewer/screen_layout.h"
 #include "viewer/search_dialog.h"
+#include "viewer/text_log_file.h"
 
 namespace po = boost::program_options;
 
-void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
+void ShowFile(std::unique_ptr<oko::LogFile> file) {
   initscr();
   start_color();
   noecho();
@@ -86,28 +87,16 @@ void ShowFile(std::unique_ptr<oko::MemorylogLogFile> file) {
   endwin();
 }
 
-void AnalyzeFile(const std::string& log_path) noexcept {
-  std::unique_ptr<oko::MemorylogLogFile> file(
-      std::make_unique<oko::MemorylogLogFile>());
-  if (!file->Parse(log_path)) {
-    std::cerr << "Failed parse file " << log_path << std::endl;
-    return;
-  }
-  ShowFile(std::move(file));
-}
-
 int main(int argc, char* argv[]) {
   po::variables_map vm;
   try {
     po::options_description desc;
     desc.add_options()
         ("help,h", "Help")
-        ("log_path", po::value<std::string>()->required(), "Path to log file");
-    po::positional_options_description p;
-    p.add("log_path", 1);
-
+        ("memorylog,m", po::value<std::string>(), "Path to memorylog log file")
+        ("textlog,t", po::value<std::string>(), "Path to text log file");
     po::store(
-        po::command_line_parser(argc, argv).options(desc).positional(p).run(),
+        po::command_line_parser(argc, argv).options(desc).run(),
         vm);
     if (vm.count("help")) {
       std::cout << desc << std::endl;
@@ -118,6 +107,26 @@ int main(int argc, char* argv[]) {
     std::cerr << ex.what() << std::endl;
     return 1;
   }
-  AnalyzeFile(vm["log_path"].as<std::string>());
+  if (!(vm.count("memorylog") != 0 ^ vm.count("textlog") != 0)) {
+    std::cerr << ("Eiter \"memorylog\" or \"textlog\" option "
+        "must be present, but not both.") << std::endl;
+    return 1;
+  }
+
+
+  std::unique_ptr<oko::LogFile> file;
+  std::string log_path;
+  if (vm.count("memorylog")) {
+    file = std::make_unique<oko::MemorylogLogFile>();
+    log_path = vm["memorylog"].as<std::string>();
+  } else {
+    file = std::make_unique<oko::TextLogFile>();
+    log_path = vm["textlog"].as<std::string>();
+  }
+  if (!file->Parse(log_path)) {
+    std::cerr << "Failed parse file " << log_path << std::endl;
+    return 1;
+  }
+  ShowFile(std::move(file));
   return 0;
 }

@@ -30,6 +30,8 @@ cc_binary(
         "search_dialog.h",
         "status_window.cc",
         "status_window.h",
+        "text_log_file.cc",
+        "text_log_file.h",
         "window.cc",
         "window.h",
     ],
