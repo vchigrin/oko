@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
 
-#include "viewer/add_pattern_filter_dialog.h"
+#include "viewer/ui/add_pattern_filter_dialog.h"
 
 #include <algorithm>
 #include <utility>

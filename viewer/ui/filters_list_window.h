@@ -8,7 +8,7 @@
 
 #include "viewer/app_model.h"
 #include "viewer/log_pattern_filter.h"
-#include "viewer/window.h"
+#include "viewer/ui/window.h"
 
 namespace oko {
 

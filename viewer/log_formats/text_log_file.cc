@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
 
-#include "viewer/text_log_file.h"
+#include "viewer/log_formats/text_log_file.h"
 
 #include <charconv>
 #include <utility>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
 
-#include "viewer/log_window.h"
+#include "viewer/ui/log_window.h"
 
 #include <algorithm>
 #include <array>
@@ -13,8 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include "viewer/color_manager.h"
-#include "viewer/ncurses_helpers.h"
+#include "viewer/ui/color_manager.h"
+#include "viewer/ui/ncurses_helpers.h"
 
 namespace oko {
 

@@ -7,9 +7,9 @@
 #include <vector>
 
 #include "viewer/app_model.h"
-#include "viewer/filters_list_window.h"
-#include "viewer/log_window.h"
-#include "viewer/status_window.h"
+#include "viewer/ui/filters_list_window.h"
+#include "viewer/ui/log_window.h"
+#include "viewer/ui/status_window.h"
 
 namespace oko {
 

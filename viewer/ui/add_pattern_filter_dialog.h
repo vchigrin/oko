@@ -5,25 +5,26 @@
 #pragma once
 #include <form.h>
 
-#include <optional>
+#include <memory>
 #include <string>
 
 #include "viewer/app_model.h"
-#include "viewer/dialog_window.h"
+#include "viewer/ui/dialog_window.h"
 
 namespace oko {
 
-class GoToTimestampDialog : public DialogWindow {
+class AddPatternFilterDialog : public DialogWindow {
  public:
-  explicit GoToTimestampDialog(AppModel* model) noexcept;
+  AddPatternFilterDialog(
+      AppModel* model,
+      bool is_include_filter) noexcept;
 
  private:
-  void DisplayImpl() noexcept override;
   bool HandleEnter() noexcept override;
   std::string GetTitle() const noexcept override;
 
   AppModel* app_model_;
-  int margin_ = 0;
+  const bool is_include_filter_;
 };
 
 }  // namespace oko

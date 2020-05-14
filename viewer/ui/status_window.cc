@@ -2,14 +2,14 @@
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
 
-#include "viewer/status_window.h"
+#include "viewer/ui/status_window.h"
 
 #include <algorithm>
 #include <boost/format.hpp>
 #include <utility>
 
-#include "viewer/color_manager.h"
-#include "viewer/ncurses_helpers.h"
+#include "viewer/ui/color_manager.h"
+#include "viewer/ui/ncurses_helpers.h"
 
 namespace oko {
 

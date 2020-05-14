@@ -9,22 +9,19 @@
 #include <string>
 
 #include "viewer/app_model.h"
-#include "viewer/dialog_window.h"
+#include "viewer/ui/dialog_window.h"
 
 namespace oko {
 
-class AddPatternFilterDialog : public DialogWindow {
+class SearchDialog : public DialogWindow {
  public:
-  AddPatternFilterDialog(
-      AppModel* model,
-      bool is_include_filter) noexcept;
+  explicit SearchDialog(AppModel* model) noexcept;
 
  private:
   bool HandleEnter() noexcept override;
   std::string GetTitle() const noexcept override;
 
   AppModel* app_model_;
-  const bool is_include_filter_;
 };
 
 }  // namespace oko

@@ -9,14 +9,14 @@
 #include <iostream>
 #include <optional>
 
-#include "viewer/add_pattern_filter_dialog.h"
 #include "viewer/app_model.h"
-#include "viewer/go_to_timestamp_dialog.h"
-#include "viewer/memorylog_log_file.h"
-#include "viewer/ncurses_helpers.h"
-#include "viewer/screen_layout.h"
-#include "viewer/search_dialog.h"
-#include "viewer/text_log_file.h"
+#include "viewer/log_formats/memorylog_log_file.h"
+#include "viewer/log_formats/text_log_file.h"
+#include "viewer/ui/add_pattern_filter_dialog.h"
+#include "viewer/ui/go_to_timestamp_dialog.h"
+#include "viewer/ui/ncurses_helpers.h"
+#include "viewer/ui/screen_layout.h"
+#include "viewer/ui/search_dialog.h"
 
 namespace po = boost::program_options;
 

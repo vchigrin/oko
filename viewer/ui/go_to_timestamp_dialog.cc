@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
 
-#include "viewer/go_to_timestamp_dialog.h"
+#include "viewer/ui/go_to_timestamp_dialog.h"
 
 #include <algorithm>
 #include <boost/algorithm/string/trim.hpp>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
 
-#include "viewer/color_manager.h"
+#include "viewer/ui/color_manager.h"
 
 namespace oko {
 

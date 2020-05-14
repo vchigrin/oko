@@ -7,7 +7,7 @@
 
 #include "viewer/app_model.h"
 #include "viewer/log_record.h"
-#include "viewer/window.h"
+#include "viewer/ui/window.h"
 
 
 namespace oko {

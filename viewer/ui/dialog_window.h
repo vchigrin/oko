@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "viewer/window.h"
+#include "viewer/ui/window.h"
 
 namespace oko {
 

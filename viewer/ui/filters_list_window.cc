@@ -2,12 +2,12 @@
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
 
-#include "viewer/filters_list_window.h"
+#include "viewer/ui/filters_list_window.h"
 
 #include <algorithm>
 
-#include "viewer/color_manager.h"
-#include "viewer/ncurses_helpers.h"
+#include "viewer/ui/color_manager.h"
+#include "viewer/ui/ncurses_helpers.h"
 
 namespace oko {
 
