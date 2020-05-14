@@ -111,6 +111,12 @@ void LogWindow::DisplayTime(
     assert(false);
     return;
   }
+  // Ensure exactly 9 digits will be for nsecs, add zeros as required.
+  uint64_t margin = 100000000;
+  while (nsecs < margin) {
+    *next++ = '0';
+    margin /= 10;
+  }
   to_char_res = std::to_chars(next, end_ptr, nsecs);
   if (to_char_res.ec != std::errc() ||
       to_char_res.ptr == end_ptr) {
