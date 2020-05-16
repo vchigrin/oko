@@ -28,4 +28,24 @@ class WithColor {
   const int pair_;
 };
 
+// RAII wrapper around ncurses initialization and finalization code.
+class WithTUI {
+ public:
+  WithTUI() noexcept {
+    initscr();
+    start_color();
+    noecho();
+    // Make all characters available immediately as typed.
+    cbreak();
+    // Invisible cursor.
+    curs_set(0);
+    keypad(stdscr, true);
+    refresh();
+  }
+
+  ~WithTUI() {
+    endwin();
+  }
+};
+
 }  // namespace oko

@@ -4,17 +4,18 @@
 
 #include "viewer/log_formats/text_log_file.h"
 
+#include <boost/algorithm/string/predicate.hpp>
 #include <charconv>
 #include <utility>
 
 namespace oko {
 
 // Class for parsing log files in some proprientary project.
-bool TextLogFile::Parse(const std::string& file_path) noexcept {
+bool TextLogFile::Parse(const std::filesystem::path& file_path) noexcept {
   mapped_file_ = boost::iostreams::mapped_file(file_path);
   nsec_counter_base_ = std::nullopt;
   if (!mapped_file_.is_open()) {
-    file_path_ = std::string();
+    file_path_ = std::filesystem::path();
     return false;
   }
   file_path_ = file_path;
@@ -151,6 +152,12 @@ void TextLogFile::AddRecord(
     return;
   }
   records_.emplace_back(current_time_point, level, std::move(message));
+}
+
+// static
+bool TextLogFile::NameMatches(const std::string& file_name) noexcept {
+  return boost::ends_with(file_name, "-async-stdout.log") ||
+         boost::ends_with(file_name, "-async-stderr.log");
 }
 
 }  // namespace oko

@@ -6,14 +6,17 @@
 
 #include <ncurses.h>
 
+#include <filesystem>
 #include <iostream>
 #include <optional>
 
 #include "viewer/app_model.h"
+#include "viewer/directory_log_files_provider.h"
 #include "viewer/log_formats/memorylog_log_file.h"
 #include "viewer/log_formats/text_log_file.h"
 #include "viewer/ui/add_pattern_filter_dialog.h"
 #include "viewer/ui/go_to_timestamp_dialog.h"
+#include "viewer/ui/log_files_window.h"
 #include "viewer/ui/ncurses_helpers.h"
 #include "viewer/ui/screen_layout.h"
 #include "viewer/ui/search_dialog.h"
@@ -21,15 +24,6 @@
 namespace po = boost::program_options;
 
 void ShowFile(std::unique_ptr<oko::LogFile> file) {
-  initscr();
-  start_color();
-  noecho();
-  // Make all characters available immediately as typed.
-  cbreak();
-  // Invisible cursor.
-  curs_set(0);
-  keypad(stdscr, true);
-  refresh();
   oko::AppModel model(std::move(file));
   oko::ScreenLayout screen_layout(&model);
   std::unique_ptr<oko::DialogWindow> current_dialog;
@@ -84,7 +78,31 @@ void ShowFile(std::unique_ptr<oko::LogFile> file) {
       current_dialog.reset();
     }
   }
-  endwin();
+}
+
+std::filesystem::path RunChooseFileInDirectory(
+    const std::string& directory_path) noexcept {
+  oko::DirectoryLogFilesProvider provider(directory_path);
+  int num_rows = 0, num_columns = 0;
+  getmaxyx(stdscr, num_rows, num_columns);
+  oko::LogFilesWindow window(&provider, 0, 0, num_rows, num_columns);
+  if (!window.has_any_file_infos()) {
+    return std::filesystem::path();
+  }
+
+  while (true) {
+    window.Display();
+    int key = getch();
+    switch (key) {
+      case 'q':
+        return std::filesystem::path();
+      default:
+        window.HandleKeyPress(key);
+    }
+    if (window.finished()) {
+      return window.fetched_file_path();
+    }
+  }
 }
 
 int main(int argc, char* argv[]) {
@@ -94,7 +112,9 @@ int main(int argc, char* argv[]) {
     desc.add_options()
         ("help,h", "Help")
         ("memorylog,m", po::value<std::string>(), "Path to memorylog log file")
-        ("textlog,t", po::value<std::string>(), "Path to text log file");
+        ("textlog,t", po::value<std::string>(), "Path to text log file")
+        ("directory,d", po::value<std::string>(),
+            "Path to directory with log files");
     po::store(
         po::command_line_parser(argc, argv).options(desc).run(),
         vm);
@@ -107,21 +127,39 @@ int main(int argc, char* argv[]) {
     std::cerr << ex.what() << std::endl;
     return 1;
   }
-  if (!(vm.count("memorylog") != 0 ^ vm.count("textlog") != 0)) {
-    std::cerr << ("Eiter \"memorylog\" or \"textlog\" option "
-        "must be present, but not both.") << std::endl;
+  const int options_count =
+      vm.count("memorylog") + vm.count("textlog") + vm.count("directory");
+  if (options_count != 1) {
+    std::cerr << ("Eiter \"memorylog\" or \"textlog\" or \"directory\" option "
+        "must be present, end exactly one.") << std::endl;
     return 1;
   }
 
-
   std::unique_ptr<oko::LogFile> file;
-  std::string log_path;
+  std::filesystem::path log_path;
+  oko::WithTUI tui_initializer;
   if (vm.count("memorylog")) {
     file = std::make_unique<oko::MemorylogLogFile>();
     log_path = vm["memorylog"].as<std::string>();
-  } else {
+  } else if (vm.count("textlog")) {
     file = std::make_unique<oko::TextLogFile>();
     log_path = vm["textlog"].as<std::string>();
+  } else if (vm.count("directory")) {
+    log_path = RunChooseFileInDirectory(vm["directory"].as<std::string>());
+    if (log_path.empty()) {
+      return 1;
+    }
+    if (oko::TextLogFile::NameMatches(log_path.filename())) {
+      file = std::make_unique<oko::TextLogFile>();
+    } else if (oko::MemorylogLogFile::NameMatches(log_path.filename())) {
+      file = std::make_unique<oko::MemorylogLogFile>();
+    } else {
+      assert(false);
+    }
+  } else {
+    // Check in code above should exit program in this case.
+    assert(false);
+    return 1;
   }
   if (!file->Parse(log_path)) {
     std::cerr << "Failed parse file " << log_path << std::endl;

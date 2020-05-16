@@ -15,11 +15,11 @@ namespace {
 const std::string_view kRecordStartSentinel = "\niPao2ijSahbe0F";
 }  //  namespace
 
-bool MemorylogLogFile::Parse(const std::string& file_path) noexcept {
+bool MemorylogLogFile::Parse(const std::filesystem::path& file_path) noexcept {
   records_.clear();
   mapped_file_ = boost::iostreams::mapped_file(file_path);
   if (!mapped_file_.is_open()) {
-    file_path_ = std::string();
+    file_path_ = std::filesystem::path();
     return false;
   }
   file_path_ = file_path;
@@ -211,6 +211,12 @@ void MemorylogLogFile::ProcessRecords(
     // first time point must not fall inside added region.
     assert(false);
   }
+}
+
+// static
+bool MemorylogLogFile::NameMatches(const std::string& file_name) noexcept {
+  return boost::starts_with(file_name, "memorylog_dump_") &&
+      file_name.find(".") == std::string::npos;
 }
 
 }  // namespace oko

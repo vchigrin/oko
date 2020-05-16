@@ -50,7 +50,7 @@ class AppModel {
     return active_filters_;
   }
 
-  const std::string& file_path() const noexcept {
+  const std::filesystem::path& file_path() const noexcept {
     return file_->file_path();
   }
 
