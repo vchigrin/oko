@@ -6,11 +6,29 @@
 
 #include <algorithm>
 #include <array>
+#include <boost/algorithm/string/replace.hpp>
 #include <charconv>
 
 #include "viewer/ui/color_manager.h"
 
 namespace oko {
+
+namespace {
+
+std::regex FileMaskToRegEx(std::string mask) noexcept {
+  std::vector<char> result{mask.begin(), mask.end()};
+  boost::algorithm::replace_all(result, ".", "\\.");
+  boost::algorithm::replace_all(result, "^", "\\^");
+  boost::algorithm::replace_all(result, "$", "\\$");
+  boost::algorithm::replace_all(result, "*", ".*");
+  boost::algorithm::replace_all(result, "?", ".");
+  result.insert(result.begin(), '^');
+  result.push_back('$');
+  result.push_back(0);
+  return std::regex(result.data());
+}
+
+}  // namespace
 
 LogFilesWindow::LogFilesWindow(
     LogFilesProvider* files_provider,
@@ -118,6 +136,56 @@ void LogFilesWindow::Finish() noexcept {
   fetched_file_path_ = files_provider_->FetchLog(
      file_infos_[selected_item_].name);
   finished_ = true;
+}
+
+void LogFilesWindow::SearchForFilesByMask(std::string mask) noexcept {
+  if (file_infos_.empty() || mask.empty()) {
+    return;
+  }
+  regex_to_search_ = FileMaskToRegEx(mask);
+  auto it = std::find_if(
+      file_infos_.begin() + selected_item_,
+      file_infos_.end(),
+      [&re = regex_to_search_.value()](const LogFileInfo& r) {
+        return std::regex_match(r.name, re);
+      });
+  if (it != file_infos_.end()) {
+    SetSelectedItem(it - file_infos_.begin());
+  }
+}
+
+void LogFilesWindow::SearchNextEntry() noexcept {
+  if (file_infos_.empty() ||
+      !regex_to_search_ ||
+      selected_item_ + 1 >= file_infos_.size()) {
+    return;
+  }
+  auto it = std::find_if(
+      file_infos_.begin() + selected_item_ + 1,
+      file_infos_.end(),
+      [&re = regex_to_search_.value()](const LogFileInfo& r) {
+        return std::regex_match(r.name, re);
+      });
+  if (it != file_infos_.end()) {
+    SetSelectedItem(it - file_infos_.begin());
+  }
+}
+
+void LogFilesWindow::SearchPrevEntry() noexcept {
+  if (file_infos_.empty() ||
+      !regex_to_search_ ||
+      selected_item_ == 0) {
+    return;
+  }
+  auto it = std::find_if(
+      std::make_reverse_iterator(file_infos_.begin() + selected_item_),
+      file_infos_.rend(),
+      [&re = regex_to_search_.value()](const LogFileInfo& r) {
+        return std::regex_match(r.name, re);
+      });
+  if (it != file_infos_.rend()) {
+    SetSelectedItem(it.base() - file_infos_.begin() - 1);
+  }
 }
 
 }  // namespace oko

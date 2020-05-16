@@ -35,6 +35,8 @@ cc_binary(
         "ui/screen_layout.h",
         "ui/search_dialog.cc",
         "ui/search_dialog.h",
+        "ui/search_log_dialog.cc",
+        "ui/search_log_dialog.h",
         "ui/status_window.cc",
         "ui/status_window.h",
         "ui/window.cc",

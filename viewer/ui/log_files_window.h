@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <optional>
+#include <regex>
+#include <string>
 #include <vector>
 
 #include "viewer/log_files_provider.h"
@@ -33,6 +36,10 @@ class LogFilesWindow : public Window {
     return fetched_file_path_;
   }
 
+  void SearchForFilesByMask(std::string mask) noexcept;
+  void SearchNextEntry() noexcept;
+  void SearchPrevEntry() noexcept;
+
  protected:
   void DisplayImpl() noexcept override;
   void DisplayTitle() noexcept;
@@ -47,6 +54,7 @@ class LogFilesWindow : public Window {
   int selected_color_pair_ = 0;
   std::filesystem::path fetched_file_path_;
   std::vector<LogFileInfo> file_infos_;
+  std::optional<std::regex> regex_to_search_;
 };
 
 }  // namespace oko

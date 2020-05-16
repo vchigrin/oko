@@ -20,6 +20,7 @@
 #include "viewer/ui/ncurses_helpers.h"
 #include "viewer/ui/screen_layout.h"
 #include "viewer/ui/search_dialog.h"
+#include "viewer/ui/search_log_dialog.h"
 
 namespace po = boost::program_options;
 
@@ -89,15 +90,35 @@ std::filesystem::path RunChooseFileInDirectory(
   if (!window.has_any_file_infos()) {
     return std::filesystem::path();
   }
+  std::unique_ptr<oko::DialogWindow> current_dialog;
 
   while (true) {
     window.Display();
+    if (current_dialog) {
+      current_dialog->Display();
+    }
     int key = getch();
-    switch (key) {
-      case 'q':
-        return std::filesystem::path();
-      default:
-        window.HandleKeyPress(key);
+    if (current_dialog) {
+      current_dialog->HandleKeyPress(key);
+    } else {
+      switch (key) {
+        case 'q':
+          return std::filesystem::path();
+        case '/':
+          current_dialog = std::make_unique<oko::SearchLogDialog>(&window);
+          break;
+        case 'n':
+          window.SearchNextEntry();
+          break;
+        case 'N':
+          window.SearchPrevEntry();
+          break;
+        default:
+          window.HandleKeyPress(key);
+      }
+    }
+    if (current_dialog && current_dialog->finished()) {
+      current_dialog.reset();
     }
     if (window.finished()) {
       return window.fetched_file_path();
