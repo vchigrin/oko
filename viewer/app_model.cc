@@ -27,34 +27,74 @@ void AppModel::AppendFilter(
       &active_view(),
       std::move(pattern),
       is_include_filter);
+  FilterSetChangeInfo info = BeforeFilterSetChanged();
   active_filters_.push_back(new_filter);
-  FilterSetChanged();
+  AfterFilterSetChanged(std::move(info));
 }
 
 void AppModel::RemoveAllFilters() noexcept {
   if (active_filters_.empty()) {
     return;
   }
+  FilterSetChangeInfo info = BeforeFilterSetChanged();
+  for (auto* filter : active_filters_) {
+    delete filter;
+  }
   active_filters_.clear();
-  FilterSetChanged();
+  AfterFilterSetChanged(std::move(info));
 }
 
 void AppModel::RemoveLastFilter() noexcept {
   if (active_filters_.empty()) {
     return;
   }
+  FilterSetChangeInfo info = BeforeFilterSetChanged();
   delete active_filters_.back();
   active_filters_.pop_back();
-  FilterSetChanged();
+  AfterFilterSetChanged(std::move(info));
 }
 
-void AppModel::FilterSetChanged() noexcept {
-  // TODO(vchigrin): Attempt to preserve marked region.
-  marked_records_begin_ = 0;
-  marked_records_end_ = 0;
-  // TODO(vchigrin): Attempt to preserve scroll position.
-  selected_record_ = 0;
+AppModel::FilterSetChangeInfo AppModel::BeforeFilterSetChanged() noexcept {
+  const auto& records = active_view().GetRecords();
+  if (records.empty()) {
+    return {};
+  }
+  AppModel::FilterSetChangeInfo result;
+  if (marked_records_begin_ != marked_records_end_) {
+    result.first_marked_record_ts = records[marked_records_begin_].timestamp();
+    result.last_marked_record_ts = records[
+        marked_records_end_ - 1].timestamp();
+  }
+  result.selected_record_ts = records[selected_record_].timestamp();
+  return result;
+}
+
+void AppModel::AfterFilterSetChanged(FilterSetChangeInfo info) noexcept {
   sig_filter_set_changed_(active_filters_);
+  const auto& records = active_view().GetRecords();
+  if (records.empty()) {
+    return;
+  }
+  SelectRecordByTimestamp(info.selected_record_ts);
+  if (info.first_marked_record_ts && info.last_marked_record_ts) {
+    marked_records_begin_ = GetIndexTimestampLessThenOrEqual(
+        *info.first_marked_record_ts);
+    if (records[marked_records_begin_].timestamp() <
+          *info.first_marked_record_ts) {
+      // First marked record in region disappeared.
+      // Make region smaller, not wider.
+      ++marked_records_begin_;
+    }
+    marked_records_end_ = GetIndexTimestampLessThenOrEqual(
+        *info.last_marked_record_ts);
+    if (marked_records_end_ < records.size()) {
+      ++marked_records_end_;
+    }
+    if (marked_records_end_ < marked_records_begin_) {
+      // Clear marked region - it entirely disappeared.
+      marked_records_end_ = marked_records_begin_;
+    }
+  }
 }
 
 void AppModel::SetMarkedRegion(
@@ -64,7 +104,11 @@ void AppModel::SetMarkedRegion(
 }
 
 void AppModel::SetSelectedRecord(size_t index) noexcept {
-  assert(index < active_view().GetRecords().size());
+  const auto& records = active_view().GetRecords();
+  if (records.empty()) {
+    return;
+  }
+  assert(index < records.size());
   selected_record_ = index;
   sig_selected_record_changed_(index);
 }
@@ -90,10 +134,11 @@ LogRecord::time_point AppModel::GetSelectedRecordTimestamp() const noexcept {
   return records[selected_record_].timestamp();
 }
 
-void AppModel::SelectRecordByTimestamp(LogRecord::time_point tp) noexcept {
+size_t AppModel::GetIndexTimestampLessThenOrEqual(
+    LogRecord::time_point tp) noexcept {
   const auto& records = active_view().GetRecords();
   if (records.empty()) {
-    return;
+    return 0;
   }
   auto it = std::lower_bound(
       records.begin(),
@@ -103,8 +148,8 @@ void AppModel::SelectRecordByTimestamp(LogRecord::time_point tp) noexcept {
         return first.timestamp() < second;
       });
   if (it == records.end()) {
-    // Out of range - select last record.
-    --it;
+    // Out of range - return last record.
+    return records.size() - 1;
   } else {
     if (it != records.begin() && it->timestamp() > tp) {
       // Select last record with timestamp less then or equal to provided
@@ -112,7 +157,11 @@ void AppModel::SelectRecordByTimestamp(LogRecord::time_point tp) noexcept {
       --it;
     }
   }
-  SetSelectedRecord(it - records.begin());
+  return it - records.begin();
+}
+
+void AppModel::SelectRecordByTimestamp(LogRecord::time_point tp) noexcept {
+  SetSelectedRecord(GetIndexTimestampLessThenOrEqual(std::move(tp)));
 }
 
 void AppModel::SearchForMessage(std::string text) noexcept {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <optional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -105,7 +106,14 @@ class AppModel {
   LogRecord::time_point GetSelectedRecordTimestamp() const noexcept;
 
  private:
-  void FilterSetChanged() noexcept;
+  struct FilterSetChangeInfo {
+    LogRecord::time_point selected_record_ts;
+    std::optional<LogRecord::time_point> first_marked_record_ts;
+    std::optional<LogRecord::time_point> last_marked_record_ts;
+  };
+  FilterSetChangeInfo BeforeFilterSetChanged() noexcept;
+  void AfterFilterSetChanged(FilterSetChangeInfo info) noexcept;
+  size_t GetIndexTimestampLessThenOrEqual(LogRecord::time_point tp) noexcept;
 
   std::unique_ptr<LogFile> file_;
   std::vector<LogPatternFilter*> active_filters_;
