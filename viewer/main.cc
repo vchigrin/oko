@@ -1,12 +1,13 @@
 // Copyright 2020 The "Oko" project authors. All rights reserved.
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
-
 #include <boost/program_options.hpp>
 
 #include <ncurses.h>
 
+#include <chrono>
 #include <filesystem>
+#include <future>
 #include <iostream>
 #include <optional>
 
@@ -18,6 +19,7 @@
 #include "viewer/ui/go_to_timestamp_dialog.h"
 #include "viewer/ui/log_files_window.h"
 #include "viewer/ui/ncurses_helpers.h"
+#include "viewer/ui/progress_window.h"
 #include "viewer/ui/screen_layout.h"
 #include "viewer/ui/search_dialog.h"
 #include "viewer/ui/search_log_dialog.h"
@@ -182,7 +184,21 @@ int main(int argc, char* argv[]) {
     assert(false);
     return 1;
   }
-  if (!file->Parse(log_path)) {
+  std::future<bool> parse_async = std::async(
+      std::launch::async,
+      [&file, &log_path] {
+          return file->Parse(log_path);
+      });
+  {
+    oko::ProgressWindow parse_file_window(
+        "Parsing file...",
+        [&parse_async] {
+            return parse_async.wait_for(
+                std::chrono::seconds(0)) == std::future_status::ready;
+        });
+    parse_file_window.PostSync();
+  }
+  if (bool parse_success = parse_async.get(); !parse_success) {
     std::cerr << "Failed parse file " << log_path << std::endl;
     return 1;
   }

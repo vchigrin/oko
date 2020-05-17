@@ -31,6 +31,8 @@ cc_binary(
         "ui/log_window.cc",
         "ui/log_window.h",
         "ui/ncurses_helpers.h",
+        "ui/progress_window.cc",
+        "ui/progress_window.h",
         "ui/screen_layout.cc",
         "ui/screen_layout.h",
         "ui/search_dialog.cc",
@@ -42,6 +44,7 @@ cc_binary(
         "ui/window.cc",
         "ui/window.h",
     ],
+    linkopts = ["-lpthread"],
     deps = [
         "@boost//:iostreams",
         "@boost//:program_options",
