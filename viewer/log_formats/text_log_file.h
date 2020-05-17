@@ -26,12 +26,15 @@ class TextLogFile : public LogFile {
   static bool NameMatches(const std::string& file_name) noexcept;
 
  private:
-  void ParseLine(std::string_view line) noexcept;
-  void AddRecord(
-      uint64_t sec, uint64_t msec,
-      uint64_t nsec_counter,
-      std::string_view level_string,
-      std::string_view message) noexcept;
+  struct RawRecordInfo {
+    uint64_t sec;
+    uint64_t msec;
+    uint64_t nsec_counter;
+    LogLevel level;
+    std::string_view message;
+  };
+  bool ParseLine(std::string_view line, RawRecordInfo& info) noexcept;
+  void AddRecord(const RawRecordInfo& info) noexcept;
 
   std::vector<LogRecord> records_;
   boost::iostreams::mapped_file_source mapped_file_;

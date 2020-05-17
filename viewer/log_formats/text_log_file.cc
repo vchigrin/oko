@@ -4,11 +4,33 @@
 
 #include "viewer/log_formats/text_log_file.h"
 
+#include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <charconv>
 #include <utility>
 
 namespace oko {
+
+namespace {
+
+template<typename Predicate>
+inline void TrimLeft(std::string_view& str, Predicate p) noexcept {
+  while (!str.empty() && p(str[0])) {
+    str.remove_prefix(1);
+  }
+}
+
+template<typename Predicate>
+inline void Trim(std::string_view& str, Predicate p) noexcept {
+  while (!str.empty() && p(str[0])) {
+    str.remove_prefix(1);
+  }
+  while (!str.empty() && p(str.back())) {
+    str.remove_suffix(1);
+  }
+}
+
+}  // namespace
 
 // Class for parsing log files in some proprientary project.
 bool TextLogFile::Parse(const std::filesystem::path& file_path) noexcept {
@@ -21,15 +43,37 @@ bool TextLogFile::Parse(const std::filesystem::path& file_path) noexcept {
   file_path_ = file_path;
   const std::string_view file_data(mapped_file_.data(), mapped_file_.size());
   size_t pos = 0;
+  std::optional<RawRecordInfo> pending_record;
   while (pos < file_data.size()) {
     size_t line_end = file_data.find('\n', pos);
     std::string_view next_line = file_data.substr(
         pos, line_end == std::string_view::npos ? line_end : line_end - pos);
-    ParseLine(next_line);
+
+    RawRecordInfo next_record;
+    if (ParseLine(next_line, next_record)) {
+      if (pending_record) {
+        AddRecord(pending_record.value());
+      }
+      // Preserve record, since next line after it may be sticked with
+      // this record message.
+      pending_record = next_record;
+    } else {
+      // Failed parse current line - extend pending record message.
+      if (pending_record) {
+        const char* next_end = next_line.data() + next_line.size();
+        assert(next_end >= pending_record->message.data());
+        pending_record->message = std::string_view(
+            pending_record->message.data(),
+            next_end - pending_record->message.data());
+      }
+    }
     if (line_end == std::string_view::npos) {
       break;
     }
     pos = line_end + 1;
+  }
+  if (pending_record) {
+    AddRecord(pending_record.value());
   }
   // Some lines may be misordered, so we must sort.
   std::sort(
@@ -41,89 +85,60 @@ bool TextLogFile::Parse(const std::filesystem::path& file_path) noexcept {
   return true;
 }
 
-void TextLogFile::ParseLine(std::string_view line) noexcept {
+bool TextLogFile::ParseLine(
+    std::string_view line,
+    TextLogFile::RawRecordInfo& info) noexcept {
   // Assumes format:
   // nanoseconds_counter | unused_character seconds.ms YYYY-MM-dd hh:mm:ss time_zone |level | message
-  uint64_t nsec_counter = 0;
+  info.nsec_counter = 0;
   auto from_chars_res = std::from_chars(
       line.data(),
       line.data() + line.size(),
-      nsec_counter);
+      info.nsec_counter);
   if (from_chars_res.ec != std::errc()) {
-    return;
+    return false;
   }
   line.remove_prefix(from_chars_res.ptr - line.data());
-  while (!line.empty() && (line[0] == ' ' || line[0] == '|')) {
-    line.remove_prefix(1);
-  }
+  TrimLeft(line, boost::algorithm::is_any_of(" |"));
   if (line.size() <= 2) {
-    return;
+    return false;
   }
   // Skip unused character and space after it
   line.remove_prefix(2);
-  uint64_t sec = 0, msec = 0;
   from_chars_res = std::from_chars(
       line.data(),
       line.data() + line.size(),
-      sec);
+      info.sec);
   if (from_chars_res.ec != std::errc() || *from_chars_res.ptr != '.') {
-    return;
+    return false;
   }
   line.remove_prefix(from_chars_res.ptr - line.data() + 1);
   // Exactly 3 digits for msec expected.
   if (line.size() < 4 || line[3] != ' ') {
-    return;
+    return false;
   }
   from_chars_res = std::from_chars(
       line.data(),
       line.data() + line.size(),
-      msec);
+      info.msec);
   if (from_chars_res.ec != std::errc() ||
       from_chars_res.ptr != line.data() + 3) {
-    return;
+    return false;
   }
   line.remove_prefix(from_chars_res.ptr - line.data() + 1);
   size_t next_sep_pos = line.find('|');
   if (next_sep_pos == std::string_view::npos) {
-    return;
+    return false;
   }
   line.remove_prefix(next_sep_pos + 1);
   next_sep_pos = line.find('|');
   if (next_sep_pos == std::string_view::npos) {
-    return;
+    return false;
   }
-  std::string_view level = line.substr(0, next_sep_pos);
-  std::string_view message = line.substr(next_sep_pos + 1);
-  while (!level.empty() && level[0] == ' ') {
-    level.remove_prefix(1);
-  }
-  while (!level.empty() && level[level.size() - 1] == ' ') {
-    level.remove_suffix(1);
-  }
-  AddRecord(
-      sec, msec,
-      nsec_counter,
-      std::move(level),
-      std::move(message));
-}
+  std::string_view level_string = line.substr(0, next_sep_pos);
+  info.message = line.substr(next_sep_pos + 1);
+  Trim(level_string, boost::is_any_of(" "));
 
-void TextLogFile::AddRecord(
-    uint64_t sec, uint64_t msec,
-    uint64_t nsec_counter,
-    std::string_view level_string,
-    std::string_view message) noexcept {
-  LogRecord::time_point current_time_point;
-  if (!nsec_counter_base_) {
-    // Assume first records fit nseconds perfectly, and calculate
-    // all subsequent records timestamps based on it.
-    current_time_point = LogRecord::time_point {} +
-        std::chrono::seconds(sec) + std::chrono::milliseconds(msec);
-    nsec_counter_base_ = current_time_point -
-        std::chrono::nanoseconds(nsec_counter);
-  } else {
-    current_time_point = *nsec_counter_base_ +
-        std::chrono::nanoseconds(nsec_counter);
-  }
   struct LevelLabelAndValue {
     const std::string_view label;
     const LogLevel value;
@@ -149,9 +164,28 @@ void TextLogFile::AddRecord(
     }
   }
   if (level == LogLevel::Invalid) {
-    return;
+    return false;
   }
-  records_.emplace_back(current_time_point, level, std::move(message));
+  info.level=level;
+  return true;
+}
+
+void TextLogFile::AddRecord(const RawRecordInfo& info) noexcept {
+  LogRecord::time_point current_time_point;
+  if (!nsec_counter_base_) {
+    // Assume first records fit nseconds perfectly, and calculate
+    // all subsequent records timestamps based on it.
+    current_time_point = LogRecord::time_point {} +
+        std::chrono::seconds(info.sec) + std::chrono::milliseconds(info.msec);
+    nsec_counter_base_ = current_time_point -
+        std::chrono::nanoseconds(info.nsec_counter);
+  } else {
+    current_time_point = *nsec_counter_base_ +
+        std::chrono::nanoseconds(info.nsec_counter);
+  }
+  std::string_view msg = info.message;
+  Trim(msg, boost::is_any_of(" \n\r"));
+  records_.emplace_back(current_time_point, info.level, msg);
 }
 
 // static

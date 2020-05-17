@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <boost/algorithm/string/replace.hpp>
 #include <charconv>
 #include <chrono>
 #include <optional>
@@ -183,7 +184,11 @@ void LogWindow::DisplayMessage(
   if (message_horz_offset_ > message.size()) {
     return;
   }
-  std::string_view part_to_display = message.substr(message_horz_offset_);
+  std::string part_to_display(
+      message.data() + message_horz_offset_,
+      message.data() + message.size());
+  part_to_display = boost::algorithm::replace_all_copy(
+      part_to_display, "\n", "\\n");
   const std::string& search_text = app_model_->search_text();
   size_t search_index = part_to_display.find(search_text);
   if (search_text.empty() || search_index == std::string_view::npos) {
