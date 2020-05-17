@@ -12,7 +12,8 @@ ScreenLayout::ScreenLayout(AppModel* model) noexcept
     : app_model_(model),
       log_window_(model, 0, 0, 1, 1),
       filter_list_window_(model, 0, 0, 1),
-      status_window_(model, 0, 0, 1) {
+      status_window_(model, 0, 0, 1),
+      function_bar_window_(0, 0, 1) {
   filter_set_changed_conn_ =
       app_model_->ConnectFilterSetChanged(
           std::bind(
@@ -26,6 +27,7 @@ void ScreenLayout::Display() noexcept {
   log_window_.Display();
   status_window_.Display();
   filter_list_window_.Display();
+  function_bar_window_.Display();
 }
 
 void ScreenLayout::RecalcPositions() noexcept {
@@ -38,13 +40,21 @@ void ScreenLayout::RecalcPositions() noexcept {
   } else {
     filter_list_window_.Hide();
   }
+  const int log_window_height = std::max(
+      1,
+      max_row -
+      StatusWindow::kRows -
+      FunctionBarWindow::kRows - filter_window_height);
   log_window_.Move(
       filter_window_height, 0,
-      std::max(1, max_row - StatusWindow::kRows - filter_window_height),
+      log_window_height,
       max_col);
   status_window_.Move(
-      std::max(0, max_row - oko::StatusWindow::kRows), 0,
+      std::max(0, max_row - StatusWindow::kRows - FunctionBarWindow::kRows), 0,
       StatusWindow::kRows, max_col);
+  function_bar_window_.Move(
+      std::max(0, max_row -FunctionBarWindow::kRows), 0,
+      FunctionBarWindow::kRows, max_col);
 }
 
 void ScreenLayout::HandleKeyPress(int key) noexcept {

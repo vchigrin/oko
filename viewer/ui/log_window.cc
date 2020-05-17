@@ -223,6 +223,7 @@ void LogWindow::DisplayMessage(
 void LogWindow::HandleKeyPress(int key) noexcept {
   switch (key) {
     case 'm':
+    case KEY_F(10):
       marking_ = !marking_;
       if (marking_) {
         const size_t cur_record = app_model_->selected_record();

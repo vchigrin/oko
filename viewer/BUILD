@@ -24,6 +24,8 @@ cc_binary(
         "ui/dialog_window.h",
         "ui/filters_list_window.cc",
         "ui/filters_list_window.h",
+        "ui/function_bar_window.cc",
+        "ui/function_bar_window.h",
         "ui/go_to_timestamp_dialog.cc",
         "ui/go_to_timestamp_dialog.h",
         "ui/log_files_window.cc",

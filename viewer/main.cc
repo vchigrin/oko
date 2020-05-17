@@ -26,9 +26,23 @@
 
 namespace po = boost::program_options;
 
+void ConfigureFunctionLabels(oko::FunctionBarWindow& wnd) noexcept {
+  wnd.SetLabel(2, "RmAllFilters");
+  wnd.SetLabel(3, "RmLastFilter");
+  wnd.SetLabel(4, "GoToTimestam");
+  wnd.SetLabel(5, "InclFilter");
+  wnd.SetLabel(6, "ExlFilter");
+  wnd.SetLabel(7, "Search");
+  wnd.SetLabel(8, "SearchNext");
+  wnd.SetLabel(9, "SearchPrev");
+  wnd.SetLabel(10, "ToggleMark");
+  wnd.SetLabel(11, "Quit");
+}
+
 void ShowFile(std::unique_ptr<oko::LogFile> file) {
   oko::AppModel model(std::move(file));
   oko::ScreenLayout screen_layout(&model);
+  ConfigureFunctionLabels(screen_layout.function_bar_window());
   std::unique_ptr<oko::DialogWindow> current_dialog;
 
   bool should_run = true;
@@ -43,34 +57,43 @@ void ShowFile(std::unique_ptr<oko::LogFile> file) {
     } else {
       switch (key) {
         case 'q':
+        case KEY_F(11):
           should_run = false;
           break;
         case 'i':
+        case KEY_F(5):
           current_dialog = std::make_unique<oko::AddPatternFilterDialog>(
               &model,
               /* is_include_filter */ true);
           break;
         case 'e':
+        case KEY_F(6):
           current_dialog = std::make_unique<oko::AddPatternFilterDialog>(
               &model,
               /* is_include_filter */ false);
           break;
         case '=':
+        case KEY_F(2):
           model.RemoveAllFilters();
           break;
         case '-':
+        case KEY_F(3):
           model.RemoveLastFilter();
           break;
         case 'g':
+        case KEY_F(4):
           current_dialog = std::make_unique<oko::GoToTimestampDialog>(&model);
           break;
         case '/':
+        case KEY_F(7):
           current_dialog = std::make_unique<oko::SearchDialog>(&model);
           break;
         case 'n':
+        case KEY_F(8):
           model.SearchNextEntry();
           break;
         case 'N':
+        case KEY_F(9):
           model.SearchPrevEntry();
           break;
         default:
@@ -88,7 +111,14 @@ std::filesystem::path RunChooseFileInDirectory(
   oko::DirectoryLogFilesProvider provider(directory_path);
   int num_rows = 0, num_columns = 0;
   getmaxyx(stdscr, num_rows, num_columns);
-  oko::LogFilesWindow window(&provider, 0, 0, num_rows, num_columns);
+  oko::LogFilesWindow window(
+      &provider, 0, 0, num_rows - oko::FunctionBarWindow::kRows, num_columns);
+  oko::FunctionBarWindow func_window(
+      num_rows - oko::FunctionBarWindow::kRows, 0, num_columns);
+  func_window.SetLabel(11, "Quit");
+  func_window.SetLabel(7, "Search");
+  func_window.SetLabel(8, "SearchNext");
+  func_window.SetLabel(9, "SearchPrev");
   if (!window.has_any_file_infos()) {
     return std::filesystem::path();
   }
@@ -96,6 +126,7 @@ std::filesystem::path RunChooseFileInDirectory(
 
   while (true) {
     window.Display();
+    func_window.Display();
     if (current_dialog) {
       current_dialog->Display();
     }
@@ -105,14 +136,18 @@ std::filesystem::path RunChooseFileInDirectory(
     } else {
       switch (key) {
         case 'q':
+        case KEY_F(11):
           return std::filesystem::path();
         case '/':
+        case KEY_F(7):
           current_dialog = std::make_unique<oko::SearchLogDialog>(&window);
           break;
         case 'n':
+        case KEY_F(8):
           window.SearchNextEntry();
           break;
         case 'N':
+        case KEY_F(9):
           window.SearchPrevEntry();
           break;
         default:

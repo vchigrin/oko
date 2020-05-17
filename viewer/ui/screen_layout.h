@@ -8,6 +8,7 @@
 
 #include "viewer/app_model.h"
 #include "viewer/ui/filters_list_window.h"
+#include "viewer/ui/function_bar_window.h"
 #include "viewer/ui/log_window.h"
 #include "viewer/ui/status_window.h"
 
@@ -20,16 +21,20 @@ class ScreenLayout {
   void RecalcPositions() noexcept;
   void HandleKeyPress(int key) noexcept;
 
-  oko::FilterListWindow& filter_list_window() noexcept {
+  FilterListWindow& filter_list_window() noexcept {
     return filter_list_window_;
   }
 
-  oko::LogWindow& log_window() noexcept {
+  LogWindow& log_window() noexcept {
     return log_window_;
   }
 
-  oko::StatusWindow& status_window() noexcept {
+  StatusWindow& status_window() noexcept {
     return status_window_;
+  }
+
+  FunctionBarWindow& function_bar_window() noexcept {
+    return function_bar_window_;
   }
 
  private:
@@ -40,6 +45,7 @@ class ScreenLayout {
   LogWindow log_window_;
   FilterListWindow filter_list_window_;
   StatusWindow status_window_;
+  FunctionBarWindow function_bar_window_;
   boost::signals2::scoped_connection filter_set_changed_conn_;
 };
 
