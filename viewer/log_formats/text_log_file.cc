@@ -33,15 +33,10 @@ inline void Trim(std::string_view& str, Predicate p) noexcept {
 }  // namespace
 
 // Class for parsing log files in some proprientary project.
-bool TextLogFile::Parse(const std::filesystem::path& file_path) noexcept {
-  mapped_file_ = boost::iostreams::mapped_file(file_path);
+void TextLogFile::ParseImpl(
+    std::string_view file_data,
+    std::vector<LogRecord>* records) noexcept {
   nsec_counter_base_ = std::nullopt;
-  if (!mapped_file_.is_open()) {
-    file_path_ = std::filesystem::path();
-    return false;
-  }
-  file_path_ = file_path;
-  const std::string_view file_data(mapped_file_.data(), mapped_file_.size());
   size_t pos = 0;
   std::optional<RawRecordInfo> pending_record;
   while (pos < file_data.size()) {
@@ -52,7 +47,7 @@ bool TextLogFile::Parse(const std::filesystem::path& file_path) noexcept {
     RawRecordInfo next_record;
     if (ParseLine(next_line, next_record)) {
       if (pending_record) {
-        AddRecord(pending_record.value());
+        AddRecord(records, pending_record.value());
       }
       // Preserve record, since next line after it may be sticked with
       // this record message.
@@ -73,16 +68,15 @@ bool TextLogFile::Parse(const std::filesystem::path& file_path) noexcept {
     pos = line_end + 1;
   }
   if (pending_record) {
-    AddRecord(pending_record.value());
+    AddRecord(records, pending_record.value());
   }
   // Some lines may be misordered, so we must sort.
   std::sort(
-      records_.begin(),
-      records_.end(),
+      records->begin(),
+      records->end(),
       [](const LogRecord& first, const LogRecord& second) {
         return first.timestamp() < second.timestamp();
       });
-  return true;
 }
 
 bool TextLogFile::ParseLine(
@@ -170,7 +164,9 @@ bool TextLogFile::ParseLine(
   return true;
 }
 
-void TextLogFile::AddRecord(const RawRecordInfo& info) noexcept {
+void TextLogFile::AddRecord(
+    std::vector<LogRecord>* records,
+    const RawRecordInfo& info) noexcept {
   LogRecord::time_point current_time_point;
   if (!nsec_counter_base_) {
     // Assume first records fit nseconds perfectly, and calculate
@@ -185,7 +181,7 @@ void TextLogFile::AddRecord(const RawRecordInfo& info) noexcept {
   }
   std::string_view msg = info.message;
   Trim(msg, boost::is_any_of(" \n\r"));
-  records_.emplace_back(current_time_point, info.level, msg);
+  records->emplace_back(current_time_point, info.level, msg);
 }
 
 // static

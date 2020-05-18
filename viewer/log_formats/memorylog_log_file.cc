@@ -15,15 +15,9 @@ namespace {
 const std::string_view kRecordStartSentinel = "\niPao2ijSahbe0F";
 }  //  namespace
 
-bool MemorylogLogFile::Parse(const std::filesystem::path& file_path) noexcept {
-  records_.clear();
-  mapped_file_ = boost::iostreams::mapped_file(file_path);
-  if (!mapped_file_.is_open()) {
-    file_path_ = std::filesystem::path();
-    return false;
-  }
-  file_path_ = file_path;
-  const std::string_view file_data(mapped_file_.data(), mapped_file_.size());
+void MemorylogLogFile::ParseImpl(
+    std::string_view file_data,
+    std::vector<LogRecord>* records) noexcept {
   size_t pos = 0;
   std::vector<RawRecord> raw_records;
   while (pos < file_data.size()) {
@@ -69,12 +63,13 @@ bool MemorylogLogFile::Parse(const std::filesystem::path& file_path) noexcept {
   }
   if (anchors.size() < 2) {
     // Can not extrapolate if we have too few anchors.
-    return false;
+    return;
   }
-  records_.reserve(raw_records.size());
+  records->reserve(raw_records.size());
   // Process records before first ahchor, using region between two
   // first anchor points for extrapolation.
   ProcessRecords(
+      records,
       RawRecordsRange(raw_records.cbegin(), anchors[0].it),
       anchors[0].it->raw_timestamp,
       anchors[0].time_point,
@@ -82,6 +77,7 @@ bool MemorylogLogFile::Parse(const std::filesystem::path& file_path) noexcept {
       anchors[1].time_point);
   for (size_t i = 1, n = anchors.size(); i < n; ++i) {
     ProcessRecords(
+        records,
         RawRecordsRange(anchors[i - 1].it, anchors[i].it),
         anchors[i - 1].it->raw_timestamp,
         anchors[i - 1].time_point,
@@ -91,12 +87,12 @@ bool MemorylogLogFile::Parse(const std::filesystem::path& file_path) noexcept {
   // Process records after last anchor, using region between
   // last two anchor points or extrapolation.
   ProcessRecords(
+      records,
       RawRecordsRange(anchors.back().it, raw_records.cend()),
       anchors[anchors.size() - 2].it->raw_timestamp,
       anchors[anchors.size() - 2].time_point,
       anchors[anchors.size() - 1].it->raw_timestamp,
       anchors[anchors.size() - 1].time_point);
-  return true;
 }
 
 bool MemorylogLogFile::FillRecord(
@@ -166,6 +162,7 @@ bool MemorylogLogFile::ExtractTimestampFromRecord(
 }
 
 void MemorylogLogFile::ProcessRecords(
+    std::vector<LogRecord>* records,
     const boost::iterator_range<std::vector<RawRecord>::const_iterator>
         added_region,
     const uint64_t first_raw_time_stamp,
@@ -186,7 +183,7 @@ void MemorylogLogFile::ProcessRecords(
            first_time_point + (
                (raw_rec.raw_timestamp - first_raw_time_stamp) * tp_duration) /
                    raw_timestamp_duration;
-      records_.emplace_back(
+      records->emplace_back(
           tp,
           // Memory log does not proviide distinct log levels, so add
           // all records at "info" level.
@@ -201,7 +198,7 @@ void MemorylogLogFile::ProcessRecords(
            first_time_point - (
                (first_raw_time_stamp - raw_rec.raw_timestamp) * tp_duration) /
                    raw_timestamp_duration;
-      records_.emplace_back(
+      records->emplace_back(
           tp,
           // Memory log does not proviide distinct log levels, so add
           // all records at "info" level.

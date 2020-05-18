@@ -6,6 +6,8 @@ cc_binary(
         "directory_log_files_provider.cc",
         "directory_log_files_provider.h",
         "log_file.h",
+        "log_file_impl.cc",
+        "log_file_impl.h",
         "log_files_provider.h",
         "log_formats/memorylog_log_file.cc",
         "log_formats/memorylog_log_file.h",

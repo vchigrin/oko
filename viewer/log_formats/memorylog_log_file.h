@@ -3,29 +3,25 @@
 // found in the LICENSE file.
 
 #pragma once
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <string>
 #include <vector>
 
-#include "viewer/log_file.h"
+#include "viewer/log_file_impl.h"
 
 namespace oko {
 
 // Class for parsing dump files produced by memorylog library,
 // see https://github.com/agrianius/memorylog
-class MemorylogLogFile : public LogFile {
+class MemorylogLogFile : public LogFileImpl {
  public:
-  bool Parse(const std::filesystem::path& file_path) noexcept override;
-  const std::vector<LogRecord>& GetRecords() const noexcept override {
-    return records_;
-  }
-  const std::filesystem::path& file_path() const noexcept override {
-    return file_path_;
-  }
   static bool NameMatches(const std::string& file_name) noexcept;
 
  private:
+  void ParseImpl(
+      std::string_view file_data,
+      std::vector<LogRecord>* records) noexcept override;
+
   struct RawRecord {
     uint64_t raw_timestamp;
     std::string_view message;
@@ -42,15 +38,12 @@ class MemorylogLogFile : public LogFile {
   // Assumes that all records from |added_region| are ordered by raw_timestamp.
   // First anchor time point must not lie in the middle of added region.
   void ProcessRecords(
+      std::vector<LogRecord>* records,
       RawRecordsRange added_region,
       const uint64_t first_raw_time_stamp,
       const LogRecord::time_point first_time_point,
       const uint64_t second_raw_time_stamp,
       const LogRecord::time_point second_time_point);
-
-  std::vector<LogRecord> records_;
-  boost::iostreams::mapped_file_source mapped_file_;
-  std::filesystem::path file_path_;
 };
 
 }  // namespace oko
