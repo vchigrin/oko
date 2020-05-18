@@ -36,16 +36,25 @@ void StatusWindow::DisplayImpl() noexcept {
       0, max_x - total_records_text.size());
 
   if (total_records_x > 0) {
-    std::string file_name = app_model_->file_path();
-    const char* displayed_part = file_name.c_str();
-    if (total_records_x < file_name.size()) {
-      // End patf of file name is more interesting.
-      displayed_part += (file_name.size() - total_records_x);
+    auto file_paths = app_model_->GetFilePaths();
+    if (file_paths.size() == 1) {
+      std::string file_name = file_paths[0];
+      const char* displayed_part = file_name.c_str();
+      if (total_records_x < file_name.size()) {
+        // End patf of file name is more interesting.
+        displayed_part += (file_name.size() - total_records_x);
+      }
+      mvwaddstr(
+          window_.get(),
+          0, 0,
+          displayed_part);
+    } else {
+      mvwprintw(
+          window_.get(),
+          0, 0,
+          "%zi files",
+          file_paths.size());
     }
-    mvwaddstr(
-        window_.get(),
-        0, 0,
-        displayed_part);
   }
 
   wclrtoeol(window_.get());

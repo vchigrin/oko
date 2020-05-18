@@ -10,8 +10,19 @@
 
 namespace oko {
 
-AppModel::AppModel(std::unique_ptr<oko::LogFile> file)
-    : file_(std::move(file)) {
+AppModel::AppModel(std::vector<std::unique_ptr<LogFile>> files)
+    : files_(std::move(files)) {
+  if (files_.size() > 1) {
+    std::vector<LogView*> views(files_.size());
+    std::transform(
+       files_.begin(),
+       files_.end(),
+       views.begin(),
+       [](const std::unique_ptr<LogFile>& f) {
+         return f.get();
+       });
+    merger_ = std::make_unique<MergedLogView>(views);
+  }
 }
 
 AppModel::~AppModel() {

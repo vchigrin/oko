@@ -8,6 +8,7 @@
 #include <array>
 #include <boost/algorithm/string/replace.hpp>
 #include <charconv>
+#include <utility>
 
 #include "viewer/ui/color_manager.h"
 
@@ -37,8 +38,14 @@ LogFilesWindow::LogFilesWindow(
     int num_rows,
     int num_columns)
     : Window(start_row, start_col, num_rows, num_columns),
-      files_provider_(files_provider),
-      file_infos_(files_provider_->GetLogFileInfos()) {
+      files_provider_(files_provider) {
+  auto provided_file_infos = files_provider_->GetLogFileInfos();
+  file_infos_.reserve(provided_file_infos.size());
+  file_infos_.insert(
+      file_infos_.begin(),
+      provided_file_infos.begin(),
+      provided_file_infos.end());
+
   std::sort(
       file_infos_.begin(),
       file_infos_.end(),
@@ -47,6 +54,8 @@ LogFilesWindow::LogFilesWindow(
       });
   ColorManager& cm = ColorManager::instance();
   selected_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_WHITE);
+  selected_marked_color_pair_ = cm.RegisterColorPair(COLOR_WHITE, COLOR_RED);
+  marked_color_pair_ = cm.RegisterColorPair(COLOR_YELLOW, COLOR_RED);
 }
 
 void LogFilesWindow::HandleKeyPress(int key) noexcept {
@@ -61,6 +70,16 @@ void LogFilesWindow::HandleKeyPress(int key) noexcept {
     case KEY_UP:
       if (selected_item_ > 0) {
         SetSelectedItem(selected_item_ - 1);
+      }
+      break;
+    case 'm':
+    case KEY_F(10):
+      if (!file_infos_.empty()) {
+        file_infos_[selected_item_].is_marked =
+            !file_infos_[selected_item_].is_marked;
+        if (selected_item_ + 1 < file_infos_.size()) {
+          SetSelectedItem(selected_item_ + 1);
+        }
       }
       break;
     case KEY_ENTER:
@@ -80,11 +99,18 @@ void LogFilesWindow::DisplayImpl() noexcept {
       first_shown_item_ + num_rows_ - 1);
   int original_bkgd = getbkgd(window_.get());
   for (size_t i = first_shown_item_, row = 1; i < limit; ++i, ++row) {
-    if (i == selected_item_) {
+    bool bg_changed = true;
+    if (i == selected_item_ && file_infos_[i].is_marked) {
+      wbkgdset(window_.get(), COLOR_PAIR(selected_marked_color_pair_));
+    } else if (i == selected_item_) {
       wbkgdset(window_.get(), COLOR_PAIR(selected_color_pair_));
+    } else if (file_infos_[i].is_marked) {
+      wbkgdset(window_.get(), COLOR_PAIR(marked_color_pair_));
+    } else {
+      bg_changed = false;
     }
     DisplayItem(row, file_infos_[i]);
-    if (i == selected_item_) {
+    if (bg_changed) {
       wbkgdset(window_.get(), original_bkgd);
     }
   }
@@ -133,8 +159,13 @@ void LogFilesWindow::SetSelectedItem(size_t new_item) noexcept {
 }
 
 void LogFilesWindow::Finish() noexcept {
-  fetched_file_path_ = files_provider_->FetchLog(
-     file_infos_[selected_item_].name);
+  fetched_file_paths_.clear();
+  for (size_t i = 0; i < file_infos_.size(); ++i) {
+    if (i == selected_item_ || file_infos_[i].is_marked) {
+      auto file_path = files_provider_->FetchLog(file_infos_[i].name);
+      fetched_file_paths_.emplace_back(std::move(file_path));
+    }
+  }
   finished_ = true;
 }
 

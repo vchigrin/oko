@@ -39,8 +39,8 @@ void ConfigureFunctionLabels(oko::FunctionBarWindow& wnd) noexcept {
   wnd.SetLabel(11, "Quit");
 }
 
-void ShowFile(std::unique_ptr<oko::LogFile> file) {
-  oko::AppModel model(std::move(file));
+void ShowFiles(std::vector<std::unique_ptr<oko::LogFile>> files) {
+  oko::AppModel model(std::move(files));
   oko::ScreenLayout screen_layout(&model);
   ConfigureFunctionLabels(screen_layout.function_bar_window());
   std::unique_ptr<oko::DialogWindow> current_dialog;
@@ -106,7 +106,7 @@ void ShowFile(std::unique_ptr<oko::LogFile> file) {
   }
 }
 
-std::filesystem::path RunChooseFileInDirectory(
+std::vector<std::filesystem::path> RunChooseFileInDirectory(
     const std::string& directory_path) noexcept {
   oko::DirectoryLogFilesProvider provider(directory_path);
   int num_rows = 0, num_columns = 0;
@@ -119,8 +119,9 @@ std::filesystem::path RunChooseFileInDirectory(
   func_window.SetLabel(7, "Search");
   func_window.SetLabel(8, "SearchNext");
   func_window.SetLabel(9, "SearchPrev");
+  func_window.SetLabel(10, "ToggleMark");
   if (!window.has_any_file_infos()) {
-    return std::filesystem::path();
+    return {};
   }
   std::unique_ptr<oko::DialogWindow> current_dialog;
 
@@ -137,7 +138,7 @@ std::filesystem::path RunChooseFileInDirectory(
       switch (key) {
         case 'q':
         case KEY_F(11):
-          return std::filesystem::path();
+          return {};
         case '/':
         case KEY_F(7):
           current_dialog = std::make_unique<oko::SearchLogDialog>(&window);
@@ -158,7 +159,7 @@ std::filesystem::path RunChooseFileInDirectory(
       current_dialog.reset();
     }
     if (window.finished()) {
-      return window.fetched_file_path();
+      return window.fetched_file_paths();
     }
   }
 }
@@ -193,26 +194,37 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  std::unique_ptr<oko::LogFile> file;
-  std::filesystem::path log_path;
+  struct FileWithPath {
+    std::unique_ptr<oko::LogFile> file;
+    std::filesystem::path log_path;
+  };
+  std::vector<FileWithPath> files_with_paths;
   oko::WithTUI tui_initializer;
   if (vm.count("memorylog")) {
-    file = std::make_unique<oko::MemorylogLogFile>();
-    log_path = vm["memorylog"].as<std::string>();
+    files_with_paths.push_back({
+        std::make_unique<oko::MemorylogLogFile>(),
+        vm["memorylog"].as<std::string>()});
   } else if (vm.count("textlog")) {
-    file = std::make_unique<oko::TextLogFile>();
-    log_path = vm["textlog"].as<std::string>();
+    files_with_paths.push_back({
+        std::make_unique<oko::TextLogFile>(),
+        vm["textlog"].as<std::string>()});
   } else if (vm.count("directory")) {
-    log_path = RunChooseFileInDirectory(vm["directory"].as<std::string>());
-    if (log_path.empty()) {
+    auto log_paths = RunChooseFileInDirectory(vm["directory"].as<std::string>());
+    if (log_paths.empty()) {
       return 1;
     }
-    if (oko::TextLogFile::NameMatches(log_path.filename())) {
-      file = std::make_unique<oko::TextLogFile>();
-    } else if (oko::MemorylogLogFile::NameMatches(log_path.filename())) {
-      file = std::make_unique<oko::MemorylogLogFile>();
-    } else {
-      assert(false);
+    for (const auto& log_path : log_paths) {
+      FileWithPath item;
+      if (oko::TextLogFile::NameMatches(log_path.filename())) {
+        item.file = std::make_unique<oko::TextLogFile>();
+      } else if (oko::MemorylogLogFile::NameMatches(log_path.filename())) {
+        item.file = std::make_unique<oko::MemorylogLogFile>();
+      } else {
+        assert(false);
+        return 1;
+      }
+      item.log_path = std::move(log_path);
+      files_with_paths.emplace_back(std::move(item));
     }
   } else {
     // Check in code above should exit program in this case.
@@ -221,12 +233,17 @@ int main(int argc, char* argv[]) {
   }
   std::future<bool> parse_async = std::async(
       std::launch::async,
-      [&file, &log_path] {
-          return file->Parse(log_path);
+      [&files_with_paths] {
+        for (const auto& [file, log_path] : files_with_paths) {
+          if (!file->Parse(log_path)) {
+            return false;
+          }
+        }
+        return true;
       });
   {
     oko::ProgressWindow parse_file_window(
-        "Parsing file...",
+        "Parsing files...",
         [&parse_async] {
             return parse_async.wait_for(
                 std::chrono::seconds(0)) == std::future_status::ready;
@@ -234,9 +251,17 @@ int main(int argc, char* argv[]) {
     parse_file_window.PostSync();
   }
   if (bool parse_success = parse_async.get(); !parse_success) {
-    std::cerr << "Failed parse file " << log_path << std::endl;
+    std::cerr << "Failed parse file" << std::endl;
     return 1;
   }
-  ShowFile(std::move(file));
+  std::vector<std::unique_ptr<oko::LogFile>> files(files_with_paths.size());
+  std::transform(
+      files_with_paths.begin(),
+      files_with_paths.end(),
+      files.begin(),
+      [](FileWithPath& f) {
+        return std::move(f.file);
+      });
+  ShowFiles(std::move(files));
   return 0;
 }

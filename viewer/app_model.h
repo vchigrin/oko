@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <algorithm>
 #include <optional>
 #include <memory>
 #include <string>
@@ -12,24 +13,31 @@
 
 #include "viewer/log_file.h"
 #include "viewer/log_pattern_filter.h"
+#include "viewer/merged_log_view.h"
 
 namespace oko {
 
 class AppModel {
  public:
-  explicit AppModel(std::unique_ptr<oko::LogFile> file);
+  explicit AppModel(std::vector<std::unique_ptr<oko::LogFile>> files);
   ~AppModel();
 
   const LogView& active_view() const noexcept {
-    if (active_filters_.empty()) {
-      return *file_.get();
-    } else {
+    if (!active_filters_.empty()) {
       return *active_filters_.back();
+    } else if (merger_) {
+      return *merger_;
+    } else {
+      return *files_[0];
     }
   }
 
   size_t unfiltered_records_count() const noexcept {
-    return file_->GetRecords().size();
+    if (merger_) {
+      return merger_->GetRecords().size();
+    } else {
+      return files_[0]->GetRecords().size();
+    }
   }
 
   size_t marked_records_count() const noexcept {
@@ -51,8 +59,17 @@ class AppModel {
     return active_filters_;
   }
 
-  const std::filesystem::path& file_path() const noexcept {
-    return file_->file_path();
+  std::vector<std::filesystem::path> GetFilePaths() const noexcept {
+    std::vector<std::filesystem::path> result;
+    result.reserve(files_.size());
+    std::transform(
+        files_.begin(),
+        files_.end(),
+        std::back_inserter(result),
+        [](const std::unique_ptr<LogFile>& f) {
+          return f->file_path();
+        });
+    return result;
   }
 
   void SetMarkedRegion(
@@ -115,7 +132,9 @@ class AppModel {
   void AfterFilterSetChanged(FilterSetChangeInfo info) noexcept;
   size_t GetIndexTimestampLessThenOrEqual(LogRecord::time_point tp) noexcept;
 
-  std::unique_ptr<LogFile> file_;
+  const std::vector<std::unique_ptr<LogFile>> files_;
+  //  May be nullptr if |files_| have only one item.
+  std::unique_ptr<MergedLogView> merger_;
   std::vector<LogPatternFilter*> active_filters_;
   // Index of first marked record, inclusively.
   size_t marked_records_begin_ = 0;

@@ -16,6 +16,8 @@ cc_binary(
         "log_record.h",
         "log_view.h",
         "main.cc",
+        "merged_log_view.cc",
+        "merged_log_view.h",
         "ui/add_pattern_filter_dialog.cc",
         "ui/add_pattern_filter_dialog.h",
         "ui/color_manager.cc",

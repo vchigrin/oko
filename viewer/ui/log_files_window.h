@@ -32,8 +32,9 @@ class LogFilesWindow : public Window {
     return !file_infos_.empty();
   }
 
-  const std::filesystem::path& fetched_file_path() const noexcept {
-    return fetched_file_path_;
+  const std::vector<std::filesystem::path>&
+      fetched_file_paths() const noexcept {
+    return fetched_file_paths_;
   }
 
   void SearchForFilesByMask(std::string mask) noexcept;
@@ -52,8 +53,17 @@ class LogFilesWindow : public Window {
   size_t selected_item_ = 0;
   size_t first_shown_item_ = 0;
   int selected_color_pair_ = 0;
-  std::filesystem::path fetched_file_path_;
-  std::vector<LogFileInfo> file_infos_;
+  int selected_marked_color_pair_ = 0;
+  int marked_color_pair_ = 0;
+  std::vector<std::filesystem::path> fetched_file_paths_;
+
+  struct LogFileInfoAndMark : public LogFileInfo {
+    LogFileInfoAndMark(LogFileInfo& second)
+        : LogFileInfo(second) {}
+
+    bool is_marked = false;
+  };
+  std::vector<LogFileInfoAndMark> file_infos_;
   std::optional<std::regex> regex_to_search_;
 };
 
