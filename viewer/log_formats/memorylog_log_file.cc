@@ -71,6 +71,7 @@ bool MemorylogLogFile::Parse(const std::filesystem::path& file_path) noexcept {
     // Can not extrapolate if we have too few anchors.
     return false;
   }
+  records_.reserve(raw_records.size());
   // Process records before first ahchor, using region between two
   // first anchor points for extrapolation.
   ProcessRecords(
