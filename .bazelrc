@@ -5,3 +5,4 @@ build \
   --cxxopt -stdlib=libc++ \
   --cxxopt -Wall \
   --cxxopt -Werror \
+  --cxxopt -g \
