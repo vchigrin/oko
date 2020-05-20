@@ -48,4 +48,6 @@ class WithTUI {
   }
 };
 
+static const int kEscape = 27;
+
 }  // namespace oko

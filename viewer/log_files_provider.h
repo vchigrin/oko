@@ -18,6 +18,7 @@ struct LogFileInfo {
 // and fetching their content.
 class LogFilesProvider {
  public:
+  virtual ~LogFilesProvider() = default;
   virtual std::vector<LogFileInfo> GetLogFileInfos() noexcept = 0;
   // Returns path to local files with log contents.
   // |log_file_name| is a name from list, returned by |GetLogFileNames|.

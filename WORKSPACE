@@ -17,3 +17,9 @@ new_local_repository(
     build_file = "bazel/repos/ncurses.BUILD",
     path = "/usr",
 )
+
+new_local_repository(
+    name = "aws_sdk",
+    build_file = "bazel/repos/aws_sdk.BUILD",
+    path = "/opt/aws-sdk-cpp-1.7.337",
+)

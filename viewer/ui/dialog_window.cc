@@ -6,13 +6,14 @@
 
 #include <algorithm>
 
+#include "viewer/ui/ncurses_helpers.h"
+
 namespace oko {
 
 namespace {
 
 const int kDesiredWindowWidth = 70;
 const int kDesiredWindowHeight = 5;
-const int kEscape = 27;
 
 }  // namespace
 

@@ -12,9 +12,11 @@
 #include <optional>
 
 #include "viewer/app_model.h"
+#include "viewer/cache_directories_manager.h"
 #include "viewer/directory_log_files_provider.h"
 #include "viewer/log_formats/memorylog_log_file.h"
 #include "viewer/log_formats/text_log_file.h"
+#include "viewer/s3_log_files_provider.h"
 #include "viewer/ui/add_pattern_filter_dialog.h"
 #include "viewer/ui/go_to_timestamp_dialog.h"
 #include "viewer/ui/log_files_window.h"
@@ -106,13 +108,13 @@ void ShowFiles(std::vector<std::unique_ptr<oko::LogFile>> files) {
   }
 }
 
-std::vector<std::filesystem::path> RunChooseFileInDirectory(
-    const std::string& directory_path) noexcept {
-  oko::DirectoryLogFilesProvider provider(directory_path);
+std::vector<std::filesystem::path> RunChooseFile(
+    oko::LogFilesProvider& files_provider) noexcept {
   int num_rows = 0, num_columns = 0;
   getmaxyx(stdscr, num_rows, num_columns);
   oko::LogFilesWindow window(
-      &provider, 0, 0, num_rows - oko::FunctionBarWindow::kRows, num_columns);
+      &files_provider,
+      0, 0, num_rows - oko::FunctionBarWindow::kRows, num_columns);
   oko::FunctionBarWindow func_window(
       num_rows - oko::FunctionBarWindow::kRows, 0, num_columns);
   func_window.SetLabel(11, "Quit");
@@ -120,12 +122,9 @@ std::vector<std::filesystem::path> RunChooseFileInDirectory(
   func_window.SetLabel(8, "SearchNext");
   func_window.SetLabel(9, "SearchPrev");
   func_window.SetLabel(10, "ToggleMark");
-  if (!window.has_any_file_infos()) {
-    return {};
-  }
   std::unique_ptr<oko::DialogWindow> current_dialog;
 
-  while (true) {
+  while (!window.finished()) {
     window.Display();
     func_window.Display();
     if (current_dialog) {
@@ -158,10 +157,8 @@ std::vector<std::filesystem::path> RunChooseFileInDirectory(
     if (current_dialog && current_dialog->finished()) {
       current_dialog.reset();
     }
-    if (window.finished()) {
-      return window.fetched_file_paths();
-    }
   }
+  return window.fetched_file_paths();
 }
 
 int main(int argc, char* argv[]) {
@@ -173,7 +170,8 @@ int main(int argc, char* argv[]) {
         ("memorylog,m", po::value<std::string>(), "Path to memorylog log file")
         ("textlog,t", po::value<std::string>(), "Path to text log file")
         ("directory,d", po::value<std::string>(),
-            "Path to directory with log files");
+            "Path to directory with log files")
+        ("s3", po::value<std::string>(), "S3 folder URL");
     po::store(
         po::command_line_parser(argc, argv).options(desc).run(),
         vm);
@@ -187,10 +185,12 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   const int options_count =
-      vm.count("memorylog") + vm.count("textlog") + vm.count("directory");
+      vm.count("memorylog") + vm.count("textlog") + vm.count("directory") +
+      vm.count("s3");
   if (options_count != 1) {
-    std::cerr << ("Eiter \"memorylog\" or \"textlog\" or \"directory\" option "
-        "must be present, end exactly one.") << std::endl;
+    std::cerr << (
+      "Eiter \"memorylog\" or \"textlog\" or \"directory\" or \"s3\" option "
+      "must be present, end exactly one.") << std::endl;
     return 1;
   }
 
@@ -208,8 +208,29 @@ int main(int argc, char* argv[]) {
     files_with_paths.push_back({
         std::make_unique<oko::TextLogFile>(),
         vm["textlog"].as<std::string>()});
-  } else if (vm.count("directory")) {
-    auto log_paths = RunChooseFileInDirectory(vm["directory"].as<std::string>());
+  } else if (vm.count("directory") || vm.count("s3")) {
+    std::unique_ptr<oko::LogFilesProvider> provider;
+    if (vm.count("directory")) {
+      provider = std::make_unique<oko::DirectoryLogFilesProvider>(
+          vm["directory"].as<std::string>());
+    } else if (vm.count("s3")) {
+      std::string s3_url = vm["s3"].as<std::string>();
+      oko::CacheDirectoriesManager cache_manager;
+      if (!cache_manager.is_initialized()) {
+        std::cerr << "Failed initialize cache" << std::endl;
+        return 1;
+      }
+      std::filesystem::path cache_dir =
+          cache_manager.DirectoryForS3Url(s3_url);
+      if (cache_dir.empty()) {
+        std::cerr << "Failed initialize cache entry" << std::endl;
+        return 1;
+      }
+      provider = std::make_unique<oko::S3LogFilesProvider>(
+          std::move(cache_dir),
+          std::move(s3_url));
+    }
+    auto log_paths = RunChooseFile(*provider);
     if (log_paths.empty()) {
       return 1;
     }

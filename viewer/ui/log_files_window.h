@@ -28,10 +28,6 @@ class LogFilesWindow : public Window {
     return finished_;
   }
 
-  bool has_any_file_infos() const noexcept {
-    return !file_infos_.empty();
-  }
-
   const std::vector<std::filesystem::path>&
       fetched_file_paths() const noexcept {
     return fetched_file_paths_;
