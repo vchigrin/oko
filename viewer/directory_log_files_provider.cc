@@ -20,7 +20,12 @@ DirectoryLogFilesProvider::DirectoryLogFilesProvider(
 std::vector<LogFileInfo>
     DirectoryLogFilesProvider::GetLogFileInfos() noexcept {
   std::vector<LogFileInfo> result;
-  for (auto entry : std::filesystem::directory_iterator(directory_path_)) {
+  std::error_code ec;
+  auto entries = std::filesystem::directory_iterator(directory_path_, ec);
+  if (ec) {
+    return {};
+  }
+  for (auto entry : entries) {
     if (!entry.is_regular_file()) {
       continue;
     }
