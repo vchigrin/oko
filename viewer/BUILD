@@ -55,6 +55,8 @@ cc_binary(
         "ui/status_window.h",
         "ui/window.cc",
         "ui/window.h",
+        "zip_archive_files_provider.cc",
+        "zip_archive_files_provider.h",
     ],
     linkopts = ["-lpthread"],
     deps = [
@@ -62,6 +64,7 @@ cc_binary(
         "@boost//:iostreams",
         "@boost//:program_options",
         "@libcxx",
+        "@libzip",
         "@ncurses",
         "@ncurses//:forms",
     ],

@@ -4,27 +4,51 @@
 
 #include "viewer/cache_directories_manager.h"
 
-#include <boost/uuid/detail/sha1.hpp>
 #include <boost/algorithm/hex.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
+#include <boost/uuid/detail/sha1.hpp>
 #include <cstdlib>
 
 namespace oko {
 
 namespace {
 
-std::string HashData(std::string_view data) noexcept {
-  using boost::uuids::detail::sha1;
-  sha1 hash;
-  hash.process_bytes(data.data(), data.size());
-  sha1::digest_type digest;
-  hash.get_digest(digest);
+using Hasher = boost::uuids::detail::sha1;
 
+std::string DigestToString(Hasher::digest_type digest) noexcept {
   std::string result;
   boost::algorithm::hex(
-      reinterpret_cast<const char*>(&digest),
-      reinterpret_cast<const char*>(&digest) + sizeof(digest),
+      reinterpret_cast<const char*>(digest),
+      reinterpret_cast<const char*>(digest) + sizeof(Hasher::digest_type),
       std::back_inserter(result));
   return result;
+}
+
+std::string HashData(std::string_view data) noexcept {
+  Hasher hash;
+  hash.process_bytes(data.data(), data.size());
+  Hasher::digest_type digest;
+  hash.get_digest(digest);
+  return DigestToString(digest);
+}
+
+std::string HashFile(const std::filesystem::path& file_path) noexcept {
+  Hasher hash;
+
+  std::error_code ec;
+  auto file_size = std::filesystem::file_size(file_path, ec);
+  if (ec || file_size == 0) {
+    return {};
+  }
+  // mapped_file constructor will throw on empty files.
+  boost::iostreams::mapped_file mapped_file(file_path);
+  if (!mapped_file.is_open()) {
+    return {};
+  }
+  hash.process_bytes(mapped_file.data(), mapped_file.size());
+  Hasher::digest_type digest;
+  hash.get_digest(digest);
+  return DigestToString(digest);
 }
 
 std::filesystem::path GetHomeDir() noexcept {
@@ -47,8 +71,17 @@ CacheDirectoriesManager::CacheDirectoriesManager() noexcept {
 
 std::filesystem::path CacheDirectoriesManager::DirectoryForS3Url(
     const std::string& s3_directory_url) noexcept {
+  return DirectoryForHash(HashData(s3_directory_url));
+}
+
+std::filesystem::path CacheDirectoriesManager::DirectoryForHash(
+    std::string hash) noexcept {
   assert(!cache_root_path_.empty());
-  std::filesystem::path result = cache_root_path_ / HashData(s3_directory_url);
+  // TODO(vchigrin): Properly handle error;
+  if (hash.empty()) {
+    return {};
+  }
+  std::filesystem::path result = cache_root_path_ / hash;
   std::error_code ec;
   if (!std::filesystem::is_directory(result, ec) || ec) {
     std::filesystem::create_directories(result, ec);
@@ -58,6 +91,11 @@ std::filesystem::path CacheDirectoriesManager::DirectoryForS3Url(
     }
   }
   return result;
+}
+
+std::filesystem::path CacheDirectoriesManager::DirectoryForFile(
+    const std::filesystem::path& file_path) noexcept {
+  return DirectoryForHash(HashFile(file_path));
 }
 
 }  // namespace oko

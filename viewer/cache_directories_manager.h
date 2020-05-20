@@ -15,11 +15,16 @@ class CacheDirectoriesManager {
   std::filesystem::path DirectoryForS3Url(
       const std::string& s3_directory_url) noexcept;
 
+  std::filesystem::path DirectoryForFile(
+      const std::filesystem::path& file_path) noexcept;
+
   bool is_initialized() const noexcept {
     return !cache_root_path_.empty();
   }
 
  private:
+  std::filesystem::path DirectoryForHash(std::string hash) noexcept;
+
   std::filesystem::path cache_root_path_;
 };
 

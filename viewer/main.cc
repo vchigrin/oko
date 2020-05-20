@@ -25,6 +25,7 @@
 #include "viewer/ui/screen_layout.h"
 #include "viewer/ui/search_dialog.h"
 #include "viewer/ui/search_log_dialog.h"
+#include "viewer/zip_archive_files_provider.h"
 
 namespace po = boost::program_options;
 
@@ -171,7 +172,8 @@ int main(int argc, char* argv[]) {
         ("textlog,t", po::value<std::string>(), "Path to text log file")
         ("directory,d", po::value<std::string>(),
             "Path to directory with log files")
-        ("s3", po::value<std::string>(), "S3 folder URL");
+        ("s3", po::value<std::string>(), "S3 folder URL")
+        ("zip,z", po::value<std::string>(), "Path to .zip file with logs");
     po::store(
         po::command_line_parser(argc, argv).options(desc).run(),
         vm);
@@ -184,13 +186,9 @@ int main(int argc, char* argv[]) {
     std::cerr << ex.what() << std::endl;
     return 1;
   }
-  const int options_count =
-      vm.count("memorylog") + vm.count("textlog") + vm.count("directory") +
-      vm.count("s3");
-  if (options_count != 1) {
-    std::cerr << (
-      "Eiter \"memorylog\" or \"textlog\" or \"directory\" or \"s3\" option "
-      "must be present, end exactly one.") << std::endl;
+
+  if (vm.size() != 1) {
+    std::cerr << "Exactly one program option must be passed." << std::endl;
     return 1;
   }
 
@@ -208,11 +206,27 @@ int main(int argc, char* argv[]) {
     files_with_paths.push_back({
         std::make_unique<oko::TextLogFile>(),
         vm["textlog"].as<std::string>()});
-  } else if (vm.count("directory") || vm.count("s3")) {
+  } else if (vm.count("directory") || vm.count("s3") || vm.count("zip")) {
     std::unique_ptr<oko::LogFilesProvider> provider;
     if (vm.count("directory")) {
       provider = std::make_unique<oko::DirectoryLogFilesProvider>(
           vm["directory"].as<std::string>());
+    } else if (vm.count("zip")) {
+      std::string file_path = vm["zip"].as<std::string>();
+      oko::CacheDirectoriesManager cache_manager;
+      if (!cache_manager.is_initialized()) {
+        std::cerr << "Failed initialize cache" << std::endl;
+        return 1;
+      }
+      std::filesystem::path cache_dir =
+          cache_manager.DirectoryForFile(file_path);
+      if (cache_dir.empty()) {
+        std::cerr << "Failed initialize cache entry" << std::endl;
+        return 1;
+      }
+      provider = std::make_unique<oko::ZipArchiveFilesProvider>(
+          std::move(cache_dir),
+          std::move(file_path));
     } else if (vm.count("s3")) {
       std::string s3_url = vm["s3"].as<std::string>();
       oko::CacheDirectoriesManager cache_manager;
