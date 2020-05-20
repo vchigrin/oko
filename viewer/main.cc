@@ -39,7 +39,8 @@ void ConfigureFunctionLabels(oko::FunctionBarWindow& wnd) noexcept {
   wnd.SetLabel(8, "SearchNext");
   wnd.SetLabel(9, "SearchPrev");
   wnd.SetLabel(10, "ToggleMark");
-  wnd.SetLabel(11, "Quit");
+  wnd.SetLabel(11, "Toggle time format");
+  wnd.SetLabel(12, "Quit");
 }
 
 void ShowFiles(std::vector<std::unique_ptr<oko::LogFile>> files) {
@@ -118,7 +119,7 @@ std::vector<std::filesystem::path> RunChooseFile(
       0, 0, num_rows - oko::FunctionBarWindow::kRows, num_columns);
   oko::FunctionBarWindow func_window(
       num_rows - oko::FunctionBarWindow::kRows, 0, num_columns);
-  func_window.SetLabel(11, "Quit");
+  func_window.SetLabel(12, "Quit");
   func_window.SetLabel(7, "Search");
   func_window.SetLabel(8, "SearchNext");
   func_window.SetLabel(9, "SearchPrev");

@@ -7,8 +7,10 @@
 #include <algorithm>
 #include <array>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/format.hpp>
 #include <charconv>
 #include <chrono>
+#include <ctime>
 #include <optional>
 #include <string>
 #include <utility>
@@ -19,15 +21,65 @@
 
 namespace oko {
 
-namespace {
-const int kTimeStartCol = 0;
-// 10 digits for seconds + dot + 9 digits for nanoseconds.
-const int kTimeColSize = 20;
-const int kLevelStartCol = kTimeStartCol + kTimeColSize + 1;
-const int kLevelColSize = 5;
-const int kMessageStartCol = kLevelStartCol + kLevelColSize + 1;
+class TimeFormatter {
+ public:
+  virtual ~TimeFormatter() = default;
+  virtual std::string Format(const LogRecord::time_point&) const noexcept = 0;
+};
 
-}  // namespace
+class TimestampTimeFormatter : public TimeFormatter {
+ public:
+  std::string Format(const LogRecord::time_point& tp) const noexcept override {
+    const int secs = std::chrono::duration_cast<std::chrono::seconds>(
+        tp.time_since_epoch()).count();
+    const int nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        tp.time_since_epoch() - std::chrono::seconds(secs)).count();
+    return boost::str(boost::format("%1%.%2$09d") % secs % nsecs);
+  }
+};
+
+// yyyy-mm-dd hh:mm:ss.ns
+class DateTimeTimeFormatter : public TimeFormatter {
+ public:
+  std::string Format(const LogRecord::time_point& tp) const noexcept override {
+    const time_t secs = std::chrono::duration_cast<std::chrono::seconds>(
+        tp.time_since_epoch()).count();
+    const int nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        tp.time_since_epoch() - std::chrono::seconds(secs)).count();
+    std::tm* t = std::localtime(&secs);
+    if (!t) {
+      assert(false);
+      return {};
+    }
+    return boost::str(boost::format(
+        "%1$02d-%2$02d-%3$02d %4$02d:%5$02d:%6$02d.%7$09d") %
+            (t->tm_year + 1900) % (t->tm_mon + 1) % t->tm_mday %
+            t->tm_hour % t->tm_min % t->tm_sec %
+            nsecs);
+  }
+};
+
+// hh:mm:ss.ns
+class TimeOnlyTimeFormatter : public TimeFormatter {
+ public:
+  std::string Format(const LogRecord::time_point& tp) const noexcept override {
+    const time_t secs = std::chrono::duration_cast<std::chrono::seconds>(
+        tp.time_since_epoch()).count();
+    const int nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+        tp.time_since_epoch() - std::chrono::seconds(secs)).count();
+    std::tm* t = std::localtime(&secs);
+    if (!t) {
+      assert(false);
+      return {};
+    }
+    return boost::str(boost::format(
+        "%1$02d:%2$02d:%3$02d.%4$09d") %
+            t->tm_hour % t->tm_min % t->tm_sec %
+            nsecs);
+  }
+};
+
+static int kTimeFormatsCount = 3;
 
 LogWindow::LogWindow(
     AppModel* model,
@@ -60,7 +112,10 @@ LogWindow::LogWindow(
               &LogWindow::SelectedRecordChanged,
               this,
               std::placeholders::_1));
+  CreateTimeFormatter();
 }
+
+LogWindow::~LogWindow() = default;
 
 void LogWindow::DisplayImpl() noexcept {
   const size_t after_last_record = GetDisplayedRecordAfterLast();
@@ -75,12 +130,17 @@ void LogWindow::DisplayImpl() noexcept {
     if (is_marked) {
       wattron(window_.get(), COLOR_PAIR(mark_color_pair_));
     }
-    DisplayTime(is_marked, row, records[i].timestamp());
-    mvwaddch(window_.get(), row, kTimeStartCol + kTimeColSize, ' ');
-    DisplayLevel(is_marked, row, records[i].log_level());
-    mvwaddch(window_.get(), row, kLevelStartCol + kLevelColSize, ' ');
-    DisplayMessage(row, records[i].message());
+    wmove(window_.get(), row, 0);
+
+    DisplayTime(is_marked, records[i].timestamp());
+    waddch(window_.get(), ' ');
+
+    DisplayLevel(is_marked, records[i].log_level());
+    waddch(window_.get(), ' ');
+
+    DisplayMessage(records[i].message());
     wclrtoeol(window_.get());
+
     if (is_marked) {
       wattroff(window_.get(), COLOR_PAIR(mark_color_pair_));
     }
@@ -92,60 +152,36 @@ void LogWindow::DisplayImpl() noexcept {
 
 void LogWindow::DisplayTime(
     bool is_marked,
-    int row, const LogRecord::time_point time_point) noexcept {
-  std::array<char, kTimeColSize + 1> buf;
-  const int secs = std::chrono::duration_cast<std::chrono::seconds>(
-      time_point.time_since_epoch()).count();
-  const int nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(
-      time_point.time_since_epoch() - std::chrono::seconds(secs)).count();
-  char* next = buf.data();
-  char* end_ptr = buf.data() + buf.size();
-  auto to_char_res = std::to_chars(next, end_ptr, secs);
-  if (to_char_res.ec != std::errc() ||
-      to_char_res.ptr == end_ptr) {
-    assert(false);
-    return;
+    const LogRecord::time_point time_point) noexcept {
+  std::string time_str = current_time_formatter_->Format(time_point);
+  std::optional<WithColor> color;
+  if (!is_marked) {
+    color.emplace(window_, time_color_pair_);
   }
-  next = to_char_res.ptr;
-  *next++ = '.';
-  if (next == end_ptr) {
-    assert(false);
-    return;
-  }
-  // Ensure exactly 9 digits will be for nsecs, add zeros as required.
-  uint64_t margin = 100000000;
-  while (nsecs < margin) {
-    *next++ = '0';
-    margin /= 10;
-  }
-  to_char_res = std::to_chars(next, end_ptr, nsecs);
-  if (to_char_res.ec != std::errc() ||
-      to_char_res.ptr == end_ptr) {
-    assert(false);
-    return;
-  }
-  next = to_char_res.ptr;
-  while (next < end_ptr - 1) {
-    *next++ = ' ';
-  }
-  *next++ = '\0';
-  {
-    std::optional<WithColor> color;
-    if (!is_marked) {
-      color.emplace(window_, time_color_pair_);
-    }
-    mvwaddstr(
-        window_.get(),
-        row, kTimeStartCol,
-        buf.data());
+  waddstr(window_.get(), time_str.c_str());
+}
+
+void LogWindow::CreateTimeFormatter() noexcept {
+  switch (current_time_formatter_number_) {
+    case 0:
+      current_time_formatter_ = std::make_unique<TimestampTimeFormatter>();
+      break;
+    case 1:
+      current_time_formatter_ = std::make_unique<DateTimeTimeFormatter>();
+      break;
+    case 2:
+      current_time_formatter_ = std::make_unique<TimeOnlyTimeFormatter>();
+      break;
+    default:
+      assert(false);
   }
 }
 
-void LogWindow::DisplayLevel(
-    bool is_marked,
-    int row, const LogLevel level) noexcept {
+void LogWindow::DisplayLevel(bool is_marked, const LogLevel level) noexcept {
   std::string_view level_str;
   int level_pair = 0;
+  // All level strings must have the same size for better appearance on screen.
+  static constexpr int kLevelColSize = 5;
   switch (level) {
     case LogLevel::Debug:
       level_str = "DEBUG";
@@ -166,21 +202,20 @@ void LogWindow::DisplayLevel(
     default:
       assert(false);
   }
+  (void)kLevelColSize;  // Silence "unused variable" warning in Release mode.
   assert(level_str.size() == kLevelColSize);
   {
     std::optional<WithColor> color;
     if (!is_marked) {
       color.emplace(window_, level_pair);
     }
-    mvwaddnstr(
+    waddnstr(
         window_.get(),
-        row, kLevelStartCol,
         level_str.data(), level_str.size());
   }
 }
 
-void LogWindow::DisplayMessage(
-    int row, const std::string_view& message) noexcept {
+void LogWindow::DisplayMessage(const std::string_view& message) noexcept {
   if (message_horz_offset_ > message.size()) {
     return;
   }
@@ -192,13 +227,11 @@ void LogWindow::DisplayMessage(
   const std::string& search_text = app_model_->search_text();
   size_t search_index = part_to_display.find(search_text);
   if (search_text.empty() || search_index == std::string_view::npos) {
-    mvwaddnstr(
+    waddnstr(
         window_.get(),
-        row, kMessageStartCol,
         part_to_display.data(),
         part_to_display.size());
   } else {
-    wmove(window_.get(), row, kMessageStartCol);
     while (!part_to_display.empty()) {
       waddnstr(
           window_.get(),
@@ -248,6 +281,12 @@ void LogWindow::HandleKeyPress(int key) noexcept {
     case 'l':
     case KEY_RIGHT:
       ++message_horz_offset_;
+      break;
+    case 't':
+    case KEY_F(12):
+      current_time_formatter_number_ = (
+          current_time_formatter_number_ + 1) % kTimeFormatsCount;
+      CreateTimeFormatter();
       break;
   }
 }

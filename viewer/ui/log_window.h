@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include "viewer/app_model.h"
@@ -11,6 +12,8 @@
 #include "viewer/ui/window.h"
 
 namespace oko {
+
+class TimeFormatter;
 
 class LogWindow : public Window {
  public:
@@ -20,19 +23,20 @@ class LogWindow : public Window {
       int start_col,
       int num_rows,
       int num_columns) noexcept;
+  ~LogWindow();
   void HandleKeyPress(int key) noexcept override;
 
  private:
   void DisplayImpl() noexcept override;
   size_t GetDisplayedRecordAfterLast() const noexcept;
-  void DisplayMessage(int row, const std::string_view& message) noexcept;
-  void DisplayLevel(bool is_marked,
-      int row, const LogLevel level) noexcept;
+  void DisplayMessage(const std::string_view& message) noexcept;
+  void DisplayLevel(bool is_marked, const LogLevel level) noexcept;
   void DisplayTime(bool is_marked,
-      int row, const LogRecord::time_point time_point) noexcept;
+      const LogRecord::time_point time_point) noexcept;
   void MaybeExtendMarking() noexcept;
   void FilterSetChanged(const std::vector<LogPatternFilter*>&) noexcept;
   void SelectedRecordChanged(size_t selected_record) noexcept;
+  void CreateTimeFormatter() noexcept;
 
   const LogView* view_;
   AppModel* app_model_;
@@ -52,6 +56,8 @@ class LogWindow : public Window {
   int err_color_pair_ = 0;
   int mark_color_pair_ = 0;
   int search_text_color_pair_ = 0;
+  int current_time_formatter_number_ = 0;
+  std::unique_ptr<TimeFormatter> current_time_formatter_;
 };
 
 }  // namespace oko
