@@ -106,4 +106,9 @@ outcome::std_result<std::filesystem::path>
   return DirectoryForHash(std::move(maybe_hash.value()));
 }
 
+outcome::std_result<std::filesystem::path>
+    CacheDirectoriesManager::DirectoryForData(std::string_view data) noexcept {
+  return DirectoryForHash(HashData(data));
+}
+
 }  // namespace oko

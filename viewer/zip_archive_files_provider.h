@@ -21,7 +21,6 @@ class ZipArchiveFilesProvider : public LogFilesProvider {
  public:
   ZipArchiveFilesProvider(
       std::unique_ptr<CacheDirectoriesManager> cache_manager,
-      std::filesystem::path cache_directory_path,
       std::filesystem::path zip_file_path) noexcept;
 
   outcome::std_result<std::vector<LogFileInfo>>
@@ -31,7 +30,8 @@ class ZipArchiveFilesProvider : public LogFilesProvider {
       const std::string& log_file_name) noexcept override;
 
  private:
-  const std::filesystem::path cache_directory_path_;
+  outcome::std_result<std::vector<char>>
+      ReadCompressedData(zip_uint64_t entry_index) noexcept;
   std::unique_ptr<zip_t, int(*)(zip_t*)> zip_file_;
   std::unordered_map<std::string, zip_uint64_t> name_to_index_;
 };

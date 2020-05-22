@@ -21,6 +21,9 @@ class CacheDirectoriesManager {
   outcome::std_result<std::filesystem::path> DirectoryForFile(
       const std::filesystem::path& file_path) noexcept;
 
+  outcome::std_result<std::filesystem::path> DirectoryForData(
+      std::string_view data) noexcept;
+
   bool is_initialized() const noexcept {
     return !cache_root_path_.empty();
   }

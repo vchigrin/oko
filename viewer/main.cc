@@ -216,17 +216,8 @@ int main(int argc, char* argv[]) {
           vm["directory"].as<std::string>());
     } else if (vm.count("zip")) {
       std::string file_path = vm["zip"].as<std::string>();
-      oko::outcome::std_result<std::filesystem::path> maybe_cache_dir =
-          cache_manager->DirectoryForFile(file_path);
-      if (!maybe_cache_dir) {
-        oko::MessageWindow::PostSync(boost::str(boost::format(
-            "Failed initialize cache entry. %1%.") %
-                maybe_cache_dir.error().message()));
-        return 1;
-      }
       provider = std::make_unique<oko::ZipArchiveFilesProvider>(
           std::move(cache_manager),
-          std::move(maybe_cache_dir.value()),
           std::move(file_path));
     } else if (vm.count("s3")) {
       std::string s3_url = vm["s3"].as<std::string>();

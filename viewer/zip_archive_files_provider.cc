@@ -14,10 +14,8 @@ namespace oko {
 
 ZipArchiveFilesProvider::ZipArchiveFilesProvider(
     std::unique_ptr<CacheDirectoriesManager> cache_manager,
-    std::filesystem::path cache_directory_path,
     std::filesystem::path zip_file_path) noexcept
     : LogFilesProvider(std::move(cache_manager)),
-      cache_directory_path_(std::move(cache_directory_path)),
       zip_file_(
           zip_open(zip_file_path.native().c_str(), ZIP_RDONLY, nullptr),
           &zip_close) {
@@ -36,6 +34,7 @@ outcome::std_result<std::vector<LogFileInfo>>
   result.reserve(num_entries);
   for (int64_t i = 0; i < num_entries; ++i) {
     struct zip_stat entry;
+    zip_stat_init(&entry);
     if (zip_stat_index(zip_file_.get(), i, 0, &entry) != 0) {
       return ErrorCodes::kFileFormatCorrupted;
     }
@@ -51,20 +50,61 @@ outcome::std_result<std::vector<LogFileInfo>>
   return result;
 }
 
+outcome::std_result<std::vector<char>>
+    ZipArchiveFilesProvider::ReadCompressedData(
+        zip_uint64_t entry_index) noexcept {
+  std::unique_ptr<zip_file_t, int(*)(zip_file_t*)> zip_file(
+      zip_fopen_index(zip_file_.get(), entry_index, ZIP_FL_COMPRESSED),
+      &zip_fclose);
+  if (!zip_file) {
+    return ErrorCodes::kFileFormatCorrupted;
+  }
+  struct zip_stat entry;
+  zip_stat_init(&entry);
+  if (zip_stat_index(zip_file_.get(), entry_index, 0, &entry) != 0) {
+    return ErrorCodes::kFileFormatCorrupted;
+  }
+  if (!(entry.valid & ZIP_STAT_COMP_SIZE)) {
+    return ErrorCodes::kFileFormatCorrupted;
+  }
+  std::vector<char> buf(entry.comp_size);
+  auto bytes_read = zip_fread(zip_file.get(), buf.data(), buf.size());
+  if (bytes_read != entry.comp_size) {
+    return ErrorCodes::kFileFormatCorrupted;
+  }
+  return buf;
+}
+
 outcome::std_result<std::unique_ptr<LogFile>>
     ZipArchiveFilesProvider::FetchLog(
         const std::string& log_file_name) noexcept {
-  std::filesystem::path result_path = cache_directory_path_ / log_file_name;
-  std::error_code ec;
-  if (std::filesystem::exists(result_path, ec) && !ec) {
-    return CreateFileForPath(result_path);
-  }
-
   auto it = name_to_index_.find(log_file_name);
   if (it == name_to_index_.end()) {
     assert(false);
     std::abort();
   }
+  outcome::std_result<std::vector<char>> compressed_data_buf =
+      ReadCompressedData(it->second);
+  if (!compressed_data_buf) {
+    return compressed_data_buf.error();
+  }
+  outcome::std_result<std::filesystem::path> maybe_cache_directory_path =
+      cache_manager_->DirectoryForData(
+          std::string_view{
+            compressed_data_buf.value().data(),
+            compressed_data_buf.value().size()
+      });
+  if (!maybe_cache_directory_path) {
+    return maybe_cache_directory_path.error();
+  }
+
+  std::filesystem::path result_path =
+      maybe_cache_directory_path.value() / log_file_name;
+  std::error_code ec;
+  if (std::filesystem::exists(result_path, ec) && !ec) {
+    return CreateFileForPath(result_path);
+  }
+
   std::unique_ptr<zip_file_t, int(*)(zip_file_t*)> zip_file(
       zip_fopen_index(zip_file_.get(), it->second, 0),
       &zip_fclose);
