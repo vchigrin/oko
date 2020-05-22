@@ -28,6 +28,9 @@ class LogFilesProvider {
   // |log_file_name| is a name from list, returned by |GetLogFileNames|.
   virtual outcome::std_result<std::filesystem::path> FetchLog(
       const std::string& log_file_name) noexcept = 0;
+
+ protected:
+  bool CanBeLogFileName(const std::string& file_name) const noexcept;
 };
 
 }  // namespace oko

@@ -8,8 +8,6 @@
 #include <fstream>
 #include <utility>
 
-#include "viewer/log_formats/memorylog_log_file.h"
-#include "viewer/log_formats/text_log_file.h"
 #include "viewer/error_codes.h"
 
 namespace oko {
@@ -43,8 +41,7 @@ outcome::std_result<std::vector<LogFileInfo>>
       return ErrorCodes::kFileFormatCorrupted;
     }
     std::string file_name = entry.name;
-    if (MemorylogLogFile::NameMatches(file_name) ||
-        TextLogFile::NameMatches(file_name)) {
+    if (CanBeLogFileName(file_name)) {
       name_to_index_[file_name] = i;
       result.emplace_back(LogFileInfo{std::move(file_name), entry.size});
     }

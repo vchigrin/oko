@@ -6,9 +6,6 @@
 
 #include <utility>
 
-#include "viewer/log_formats/memorylog_log_file.h"
-#include "viewer/log_formats/text_log_file.h"
-
 namespace oko {
 
 // Lists log files in directory, non-recursively.
@@ -30,8 +27,7 @@ outcome::std_result<std::vector<LogFileInfo>>
       continue;
     }
     std::string file_name = entry.path().filename().native();
-    if (MemorylogLogFile::NameMatches(file_name) ||
-        TextLogFile::NameMatches(file_name)) {
+    if (CanBeLogFileName(file_name)) {
       result.emplace_back(LogFileInfo{std::move(file_name), entry.file_size()});
     }
   }

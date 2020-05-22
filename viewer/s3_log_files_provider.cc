@@ -16,8 +16,6 @@
 #include <utility>
 
 #include "viewer/error_codes.h"
-#include "viewer/log_formats/memorylog_log_file.h"
-#include "viewer/log_formats/text_log_file.h"
 
 namespace oko {
 
@@ -103,8 +101,7 @@ outcome::std_result<std::vector<LogFileInfo>>
       // List files non-recursively.
       continue;
     }
-    if (MemorylogLogFile::NameMatches(file_name) ||
-        TextLogFile::NameMatches(file_name)) {
+    if (CanBeLogFileName(file_name)) {
       result.emplace_back(LogFileInfo{
           std::move(file_name),
           static_cast<uint64_t>(s3_obj.GetSize())
