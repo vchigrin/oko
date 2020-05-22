@@ -7,9 +7,11 @@
 #include <algorithm>
 #include <array>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/format.hpp>
 #include <charconv>
 #include <future>
 #include <utility>
+#include <unordered_set>
 
 #include "viewer/ui/color_manager.h"
 #include "viewer/ui/message_window.h"
@@ -42,7 +44,7 @@ LogFilesWindow::LogFilesWindow(
     int num_columns)
     : Window(start_row, start_col, num_rows, num_columns),
       files_provider_(files_provider) {
-  std::future<std::vector<LogFileInfo>> get_file_infos_async =
+  std::future<outcome::std_result<std::vector<LogFileInfo>>> get_file_infos_async =
       std::async(
         std::launch::async,
         [files_provider]() {
@@ -58,15 +60,21 @@ LogFilesWindow::LogFilesWindow(
     progress_window.PostSync();
     Display();
   }
-  auto provided_file_infos = get_file_infos_async.get();
-  file_infos_.reserve(provided_file_infos.size());
+  auto maybe_file_infos = get_file_infos_async.get();
+  if (!maybe_file_infos) {
+    MessageWindow::PostSync(boost::str(boost::format(
+        "Failed retrieve file list. %1%.") %
+            maybe_file_infos.error().message()));
+    finished_ = true;
+    return;
+  }
+  file_infos_.reserve(maybe_file_infos.value().size());
   file_infos_.insert(
       file_infos_.begin(),
-      provided_file_infos.begin(),
-      provided_file_infos.end());
+      maybe_file_infos.value().begin(),
+      maybe_file_infos.value().end());
   if (file_infos_.empty()) {
-    MessageWindow wnd("Don't found any log files under specified path");
-    wnd.PostSync();
+    MessageWindow::PostSync("Don't found any log files under specified path");
     finished_ = true;
     return;
   }
@@ -185,15 +193,16 @@ void LogFilesWindow::SetSelectedItem(size_t new_item) noexcept {
 }
 
 void LogFilesWindow::Finish() noexcept {
-  fetched_file_paths_.clear();
+  std::vector<outcome::std_result<std::filesystem::path>> maybe_file_paths;
+  maybe_file_paths.reserve(file_infos_.size());
   std::future<void> fetch_async =
       std::async(
         std::launch::async,
-        [this]() {
+        [this, &maybe_file_paths]() {
           for (size_t i = 0; i < file_infos_.size(); ++i) {
             if (i == selected_item_ || file_infos_[i].is_marked) {
-              auto file_path = files_provider_->FetchLog(file_infos_[i].name);
-              fetched_file_paths_.emplace_back(std::move(file_path));
+              auto fetch_result = files_provider_->FetchLog(file_infos_[i].name);
+              maybe_file_paths.emplace_back(std::move(fetch_result));
             }
           }
         });
@@ -208,21 +217,24 @@ void LogFilesWindow::Finish() noexcept {
     Display();
   }
   fetch_async.get();
-  bool has_invalid = false;
-  if (!fetched_file_paths_.empty()) {
-    for (auto it = fetched_file_paths_.begin();
-        it != fetched_file_paths_.end();) {
-      if (!it->empty()) {
-        ++it;
+  std::unordered_set<std::error_code> errors;
+  fetched_file_paths_.clear();
+  if (!maybe_file_paths.empty()) {
+    for (auto& maybe_path : maybe_file_paths) {
+      if (!maybe_path) {
+        errors.emplace(std::move(maybe_path.error()));
       } else {
-        has_invalid = true;
-        it = fetched_file_paths_.erase(it);
+        fetched_file_paths_.emplace_back(std::move(maybe_path.value()));
       }
     }
   }
-  if (has_invalid) {
-    MessageWindow wnd("Some files failed to fetch");
-    wnd.PostSync();
+  if (!errors.empty()) {
+    std::stringstream message_buf;
+    message_buf << "Some files failed to fetch. ";
+    for (const auto& error : errors) {
+      message_buf << error.message() << ". ";
+    }
+    MessageWindow::PostSync(message_buf.str());
   }
   finished_ = true;
 }

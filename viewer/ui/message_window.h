@@ -12,11 +12,11 @@ namespace oko {
 
 class MessageWindow : public Window {
  public:
-  explicit MessageWindow(std::string message) noexcept;
-
-  void PostSync() noexcept;
+  static void PostSync(std::string message) noexcept;
 
  private:
+  explicit MessageWindow(std::string message) noexcept;
+
   void HandleKeyPress(int key) noexcept override;
   void DisplayImpl() noexcept override;
 

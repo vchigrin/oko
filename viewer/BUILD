@@ -7,6 +7,8 @@ cc_binary(
         "cache_directories_manager.h",
         "directory_log_files_provider.cc",
         "directory_log_files_provider.h",
+        "error_codes.cc",
+        "error_codes.h",
         "log_file.h",
         "log_file_impl.cc",
         "log_file_impl.h",

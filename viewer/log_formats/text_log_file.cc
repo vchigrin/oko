@@ -9,6 +9,8 @@
 #include <charconv>
 #include <utility>
 
+#include "viewer/error_codes.h"
+
 namespace oko {
 
 namespace {
@@ -33,7 +35,7 @@ inline void Trim(std::string_view& str, Predicate p) noexcept {
 }  // namespace
 
 // Class for parsing log files in some proprientary project.
-void TextLogFile::ParseImpl(
+std::error_code TextLogFile::ParseImpl(
     std::string_view file_data,
     std::vector<LogRecord>* records) noexcept {
   nsec_counter_base_ = std::nullopt;
@@ -77,6 +79,7 @@ void TextLogFile::ParseImpl(
       [](const LogRecord& first, const LogRecord& second) {
         return first.timestamp() < second.timestamp();
       });
+  return ErrorCodes::kOk;
 }
 
 bool TextLogFile::ParseLine(
@@ -160,7 +163,7 @@ bool TextLogFile::ParseLine(
   if (level == LogLevel::Invalid) {
     return false;
   }
-  info.level=level;
+  info.level = level;
   return true;
 }
 

@@ -1,10 +1,10 @@
 // Copyright 2020 The "Oko" project authors. All rights reserved.
 // Use of this source code is governed by a MIT license that can be
 // found in the LICENSE file.
-#include <boost/program_options.hpp>
-
 #include <ncurses.h>
 
+#include <boost/format.hpp>
+#include <boost/program_options.hpp>
 #include <chrono>
 #include <filesystem>
 #include <future>
@@ -20,6 +20,7 @@
 #include "viewer/ui/add_pattern_filter_dialog.h"
 #include "viewer/ui/go_to_timestamp_dialog.h"
 #include "viewer/ui/log_files_window.h"
+#include "viewer/ui/message_window.h"
 #include "viewer/ui/ncurses_helpers.h"
 #include "viewer/ui/progress_window.h"
 #include "viewer/ui/screen_layout.h"
@@ -216,33 +217,37 @@ int main(int argc, char* argv[]) {
       std::string file_path = vm["zip"].as<std::string>();
       oko::CacheDirectoriesManager cache_manager;
       if (!cache_manager.is_initialized()) {
-        std::cerr << "Failed initialize cache" << std::endl;
+        oko::MessageWindow::PostSync("Failed initialize cache");
         return 1;
       }
-      std::filesystem::path cache_dir =
+      oko::outcome::std_result<std::filesystem::path> maybe_cache_dir =
           cache_manager.DirectoryForFile(file_path);
-      if (cache_dir.empty()) {
-        std::cerr << "Failed initialize cache entry" << std::endl;
+      if (!maybe_cache_dir) {
+        oko::MessageWindow::PostSync(boost::str(boost::format(
+            "Failed initialize cache entry. %1%.") %
+                maybe_cache_dir.error().message()));
         return 1;
       }
       provider = std::make_unique<oko::ZipArchiveFilesProvider>(
-          std::move(cache_dir),
+          std::move(maybe_cache_dir.value()),
           std::move(file_path));
     } else if (vm.count("s3")) {
       std::string s3_url = vm["s3"].as<std::string>();
       oko::CacheDirectoriesManager cache_manager;
       if (!cache_manager.is_initialized()) {
-        std::cerr << "Failed initialize cache" << std::endl;
+        oko::MessageWindow::PostSync("Failed initialize cache");
         return 1;
       }
-      std::filesystem::path cache_dir =
+      oko::outcome::std_result<std::filesystem::path> maybe_cache_dir =
           cache_manager.DirectoryForS3Url(s3_url);
-      if (cache_dir.empty()) {
-        std::cerr << "Failed initialize cache entry" << std::endl;
+      if (!maybe_cache_dir) {
+        oko::MessageWindow::PostSync(boost::str(boost::format(
+            "Failed initialize cache entry. %1%.") %
+                maybe_cache_dir.error().message()));
         return 1;
       }
       provider = std::make_unique<oko::S3LogFilesProvider>(
-          std::move(cache_dir),
+          std::move(maybe_cache_dir.value()),
           std::move(s3_url));
     }
     auto log_paths = RunChooseFile(*provider);
@@ -267,15 +272,16 @@ int main(int argc, char* argv[]) {
     assert(false);
     return 1;
   }
-  std::future<bool> parse_async = std::async(
+  std::future<std::error_code> parse_async = std::async(
       std::launch::async,
       [&files_with_paths] {
         for (const auto& [file, log_path] : files_with_paths) {
-          if (!file->Parse(log_path)) {
-            return false;
+          std::error_code ec = file->Parse(log_path);
+          if (ec) {
+            return ec;
           }
         }
-        return true;
+        return std::error_code();
       });
   {
     oko::ProgressWindow parse_file_window(
@@ -286,8 +292,9 @@ int main(int argc, char* argv[]) {
         });
     parse_file_window.PostSync();
   }
-  if (bool parse_success = parse_async.get(); !parse_success) {
-    std::cerr << "Failed parse file" << std::endl;
+  if (std::error_code parse_result = parse_async.get(); parse_result) {
+    oko::MessageWindow::PostSync(boost::str(boost::format(
+        "Failed parse file. %1%.") % parse_result.message()));
     return 1;
   }
   std::vector<std::unique_ptr<oko::LogFile>> files(files_with_paths.size());

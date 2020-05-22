@@ -4,6 +4,7 @@
 
 #pragma once
 #include <filesystem>
+#include <system_error>
 #include <vector>
 #include "viewer/log_view.h"
 
@@ -15,7 +16,8 @@ class LogFile : public LogView {
 
   // May create inside memory view of the file, so it is expected
   // that file will not be changed or deleted during lifetime of this object.
-  virtual bool Parse(const std::filesystem::path& file_path) noexcept = 0;
+  virtual std::error_code Parse(
+      const std::filesystem::path& file_path) noexcept = 0;
   virtual const std::filesystem::path& file_path() const noexcept = 0;
 };
 

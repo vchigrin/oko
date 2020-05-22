@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <boost/outcome/outcome.hpp>
 #include <filesystem>
 #include <string>
 #include <vector>
 
 namespace oko {
+
+namespace outcome = BOOST_OUTCOME_V2_NAMESPACE;
 
 struct LogFileInfo {
   std::string name;
@@ -19,10 +22,11 @@ struct LogFileInfo {
 class LogFilesProvider {
  public:
   virtual ~LogFilesProvider() = default;
-  virtual std::vector<LogFileInfo> GetLogFileInfos() noexcept = 0;
+  virtual outcome::std_result<std::vector<LogFileInfo>>
+      GetLogFileInfos() noexcept = 0;
   // Returns path to local files with log contents.
   // |log_file_name| is a name from list, returned by |GetLogFileNames|.
-  virtual std::filesystem::path FetchLog(
+  virtual outcome::std_result<std::filesystem::path> FetchLog(
       const std::string& log_file_name) noexcept = 0;
 };
 

@@ -9,13 +9,15 @@
 #include <charconv>
 #include <utility>
 
+#include "viewer/error_codes.h"
+
 namespace oko {
 
 namespace {
 const std::string_view kRecordStartSentinel = "\niPao2ijSahbe0F";
 }  //  namespace
 
-void MemorylogLogFile::ParseImpl(
+std::error_code MemorylogLogFile::ParseImpl(
     std::string_view file_data,
     std::vector<LogRecord>* records) noexcept {
   size_t pos = 0;
@@ -63,7 +65,7 @@ void MemorylogLogFile::ParseImpl(
   }
   if (anchors.size() < 2) {
     // Can not extrapolate if we have too few anchors.
-    return;
+    return ErrorCodes::kFileFormatCorrupted;
   }
   records->reserve(raw_records.size());
   // Process records before first ahchor, using region between two
@@ -93,6 +95,7 @@ void MemorylogLogFile::ParseImpl(
       anchors[anchors.size() - 2].time_point,
       anchors[anchors.size() - 1].it->raw_timestamp,
       anchors[anchors.size() - 1].time_point);
+  return ErrorCodes::kOk;
 }
 
 bool MemorylogLogFile::FillRecord(

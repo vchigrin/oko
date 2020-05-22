@@ -17,13 +17,13 @@ DirectoryLogFilesProvider::DirectoryLogFilesProvider(
     : directory_path_(std::move(directory_path)) {
 }
 
-std::vector<LogFileInfo>
+outcome::std_result<std::vector<LogFileInfo>>
     DirectoryLogFilesProvider::GetLogFileInfos() noexcept {
   std::vector<LogFileInfo> result;
   std::error_code ec;
   auto entries = std::filesystem::directory_iterator(directory_path_, ec);
   if (ec) {
-    return {};
+    return ec;
   }
   for (auto entry : entries) {
     if (!entry.is_regular_file()) {
@@ -38,7 +38,7 @@ std::vector<LogFileInfo>
   return result;
 }
 
-std::filesystem::path DirectoryLogFilesProvider::FetchLog(
+outcome::std_result<std::filesystem::path> DirectoryLogFilesProvider::FetchLog(
     const std::string& log_file_name) noexcept {
   return directory_path_ / log_file_name;
 }

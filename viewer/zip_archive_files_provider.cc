@@ -4,11 +4,13 @@
 
 #include "viewer/zip_archive_files_provider.h"
 
+#include <cstdlib>
 #include <fstream>
 #include <utility>
 
 #include "viewer/log_formats/memorylog_log_file.h"
 #include "viewer/log_formats/text_log_file.h"
+#include "viewer/error_codes.h"
 
 namespace oko {
 
@@ -21,26 +23,24 @@ ZipArchiveFilesProvider::ZipArchiveFilesProvider(
           &zip_close) {
 }
 
-std::vector<LogFileInfo> ZipArchiveFilesProvider::GetLogFileInfos() noexcept {
+outcome::std_result<std::vector<LogFileInfo>>
+    ZipArchiveFilesProvider::GetLogFileInfos() noexcept {
   if (!zip_file_) {
-    // TODO(vchigrin): Better error reporting.
-    return {};
+    return ErrorCodes::kFileFormatCorrupted;
   }
   auto num_entries = zip_get_num_entries(zip_file_.get(), 0);
   if (num_entries <= 0) {
-    return {};
+    return ErrorCodes::kFileFormatCorrupted;
   }
   std::vector<LogFileInfo> result;
   result.reserve(num_entries);
   for (int64_t i = 0; i < num_entries; ++i) {
     struct zip_stat entry;
     if (zip_stat_index(zip_file_.get(), i, 0, &entry) != 0) {
-      // TODO(vchigrin): Better error reporting.
-      continue;
+      return ErrorCodes::kFileFormatCorrupted;
     }
     if (!(entry.valid & ZIP_STAT_NAME) || !(entry.valid & ZIP_STAT_SIZE)) {
-      // TODO(vchigrin): Better error reporting.
-      continue;
+      return ErrorCodes::kFileFormatCorrupted;
     }
     std::string file_name = entry.name;
     if (MemorylogLogFile::NameMatches(file_name) ||
@@ -52,7 +52,7 @@ std::vector<LogFileInfo> ZipArchiveFilesProvider::GetLogFileInfos() noexcept {
   return result;
 }
 
-std::filesystem::path ZipArchiveFilesProvider::FetchLog(
+outcome::std_result<std::filesystem::path> ZipArchiveFilesProvider::FetchLog(
     const std::string& log_file_name) noexcept {
   std::filesystem::path result_path = cache_directory_path_ / log_file_name;
   std::error_code ec;
@@ -62,17 +62,18 @@ std::filesystem::path ZipArchiveFilesProvider::FetchLog(
 
   auto it = name_to_index_.find(log_file_name);
   if (it == name_to_index_.end()) {
-    return {};
+    assert(false);
+    std::abort();
   }
   std::unique_ptr<zip_file_t, int(*)(zip_file_t*)> zip_file(
       zip_fopen_index(zip_file_.get(), it->second, 0),
       &zip_fclose);
   if (!zip_file) {
-    return {};
+    return ErrorCodes::kFileFormatCorrupted;
   }
   std::filesystem::create_directories(result_path.parent_path(), ec);
   if (ec) {
-    return {};
+    return ec;
   }
 
   std::filesystem::path tmp_file_path = result_path;
@@ -82,7 +83,7 @@ std::filesystem::path ZipArchiveFilesProvider::FetchLog(
         tmp_file_path,
         std::ios::out | std::ios::binary | std::ios::trunc);
     if (!dst_file.is_open()) {
-      return {};
+      return std::error_code(errno, std::generic_category());
     }
     std::vector<char> buf(4096);
     while (true) {

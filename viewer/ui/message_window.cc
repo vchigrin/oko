@@ -5,6 +5,7 @@
 #include "viewer/ui/message_window.h"
 
 #include <algorithm>
+#include <utility>
 
 #include "viewer/ui/color_manager.h"
 #include "viewer/ui/ncurses_helpers.h"
@@ -32,8 +33,10 @@ MessageWindow::MessageWindow(std::string message) noexcept
   button_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_WHITE);
 }
 
-void MessageWindow::PostSync() noexcept {
-  Display();
+// static
+void MessageWindow::PostSync(std::string message) noexcept {
+  MessageWindow wnd(std::move(message));
+  wnd.Display();
   while (true) {
     int key = getch();
     if (key == KEY_ENTER || key == '\n' || key == kEscape) {

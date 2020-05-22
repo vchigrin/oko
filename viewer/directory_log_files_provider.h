@@ -15,8 +15,9 @@ class DirectoryLogFilesProvider : public LogFilesProvider {
  public:
   explicit DirectoryLogFilesProvider(
       std::filesystem::path directory_path) noexcept;
-  std::vector<LogFileInfo> GetLogFileInfos() noexcept override;
-  std::filesystem::path FetchLog(
+  outcome::std_result<std::vector<LogFileInfo>>
+      GetLogFileInfos() noexcept override;
+  outcome::std_result<std::filesystem::path> FetchLog(
       const std::string& log_file_name) noexcept override;
 
  private:

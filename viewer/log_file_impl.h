@@ -18,13 +18,14 @@ class LogFileImpl : public LogFile {
  public:
   // May create inside memory view of the file, so it is expected
   // that file will not be changed or deleted during lifetime of this object.
-  bool Parse(const std::filesystem::path& file_path) noexcept override;
+  std::error_code Parse(
+      const std::filesystem::path& file_path) noexcept override;
   const std::filesystem::path& file_path() const noexcept override;
 
   const std::vector<LogRecord>& GetRecords() const noexcept override;
 
  protected:
-  virtual void ParseImpl(
+  virtual std::error_code ParseImpl(
       std::string_view file_data,
       std::vector<LogRecord>* records) noexcept = 0;
 

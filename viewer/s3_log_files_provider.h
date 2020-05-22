@@ -26,8 +26,9 @@ class S3LogFilesProvider : public LogFilesProvider {
       std::filesystem::path cache_directory_path,
       std::string s3_directory_url) noexcept;
   ~S3LogFilesProvider();
-  std::vector<LogFileInfo> GetLogFileInfos() noexcept override;
-  std::filesystem::path FetchLog(
+  outcome::std_result<std::vector<LogFileInfo>>
+      GetLogFileInfos() noexcept override;
+  outcome::std_result<std::filesystem::path> FetchLog(
       const std::string& log_file_name) noexcept override;
 
  private:

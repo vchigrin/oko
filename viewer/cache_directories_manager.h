@@ -3,19 +3,22 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <boost/outcome/result.hpp>
 #include <filesystem>
 #include <string>
 
 namespace oko {
 
+namespace outcome = BOOST_OUTCOME_V2_NAMESPACE;
+
 // Creates unique cache directories based on provided argument.
 class CacheDirectoriesManager {
  public:
   CacheDirectoriesManager() noexcept;
-  std::filesystem::path DirectoryForS3Url(
+  outcome::std_result<std::filesystem::path> DirectoryForS3Url(
       const std::string& s3_directory_url) noexcept;
 
-  std::filesystem::path DirectoryForFile(
+  outcome::std_result<std::filesystem::path> DirectoryForFile(
       const std::filesystem::path& file_path) noexcept;
 
   bool is_initialized() const noexcept {
@@ -23,7 +26,8 @@ class CacheDirectoriesManager {
   }
 
  private:
-  std::filesystem::path DirectoryForHash(std::string hash) noexcept;
+  outcome::std_result<std::filesystem::path> DirectoryForHash(
+      std::string hash) noexcept;
 
   std::filesystem::path cache_root_path_;
 };

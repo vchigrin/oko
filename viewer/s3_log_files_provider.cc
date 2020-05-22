@@ -15,6 +15,7 @@
 #include <regex>
 #include <utility>
 
+#include "viewer/error_codes.h"
 #include "viewer/log_formats/memorylog_log_file.h"
 #include "viewer/log_formats/text_log_file.h"
 
@@ -66,9 +67,10 @@ void S3LogFilesProvider::EnsureInitialized() noexcept {
   }
 }
 
-std::vector<LogFileInfo> S3LogFilesProvider::GetLogFileInfos() noexcept {
+outcome::std_result<std::vector<LogFileInfo>>
+    S3LogFilesProvider::GetLogFileInfos() noexcept {
   if (bucket_name_.empty()) {
-    return {};
+    return ErrorCodes::kFailedDownloadFile;
   }
 
   Aws::S3::Model::ListObjectsRequest objects_request;
@@ -80,7 +82,7 @@ std::vector<LogFileInfo> S3LogFilesProvider::GetLogFileInfos() noexcept {
 
   if (!list_objects_result.IsSuccess()) {
     // TODO(vchigrin): provide detailed error description.
-    return {};
+    return ErrorCodes::kFailedDownloadFile;
   }
   Aws::Vector<Aws::S3::Model::Object> objects =
       list_objects_result.GetResult().GetContents();
@@ -112,8 +114,8 @@ std::vector<LogFileInfo> S3LogFilesProvider::GetLogFileInfos() noexcept {
   return result;
 }
 
-std::filesystem::path S3LogFilesProvider::FetchLog(
-    const std::string& log_file_name) noexcept {
+outcome::std_result<std::filesystem::path>
+S3LogFilesProvider::FetchLog(const std::string& log_file_name) noexcept {
   std::filesystem::path dst_path = cache_directory_path_ / log_file_name;
   std::error_code ec;
   if (std::filesystem::exists(dst_path, ec) && !ec) {
@@ -127,7 +129,7 @@ std::filesystem::path S3LogFilesProvider::FetchLog(
   auto outcome = s3_client_->GetObject(object_request);
   if (!outcome.IsSuccess()) {
     // TODO(vchigrin): provide detailed error description.
-    return {};
+    return ErrorCodes::kFailedDownloadFile;
   }
   Aws::S3::Model::GetObjectResult result = outcome.GetResultWithOwnership();
   std::iostream& retrieved_file = result.GetBody();
@@ -138,14 +140,14 @@ std::filesystem::path S3LogFilesProvider::FetchLog(
         tmp_file_path,
         std::ios::out | std::ios::binary | std::ios::trunc);
     if (!dst_file.is_open()) {
-      return {};
+      return std::error_code(errno, std::generic_category());
     }
     size_t copied_size = boost::iostreams::copy(
          retrieved_file,
          dst_file);
     if (copied_size != result.GetContentLength()) {
       // Not all data copied.
-      return {};
+      return ErrorCodes::kFailedDownloadFile;
     }
   }
   std::filesystem::rename(tmp_file_path, dst_path);

@@ -17,7 +17,7 @@ class TextLogFile : public LogFileImpl {
   static bool NameMatches(const std::string& file_name) noexcept;
 
  private:
-  void ParseImpl(
+  std::error_code ParseImpl(
       std::string_view file_data,
       std::vector<LogRecord>* records) noexcept override;
 
