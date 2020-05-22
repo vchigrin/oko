@@ -23,9 +23,8 @@ std::string CustomErrorCategory::message(int c) const {
       return "File format is corrupted";
     case ErrorCodes::kFailedDownloadFile:
       return "Failed download file";
-    default:
-      assert(false);
-      return "unknown";
+    case ErrorCodes::kDecompressError:
+      return "Failed decompress file";
   }
 }
 

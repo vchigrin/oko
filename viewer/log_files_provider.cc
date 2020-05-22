@@ -9,6 +9,7 @@
 #include "viewer/log_formats/memorylog_log_file.h"
 #include "viewer/log_formats/text_log_file.h"
 #include "viewer/gzip_file_decompressor.h"
+#include "viewer/zstd_file_decompressor.h"
 
 namespace oko {
 
@@ -36,6 +37,7 @@ LogFilesProvider::LogFilesProvider(
       std::unique_ptr<CacheDirectoriesManager> cache_manager) noexcept
     : cache_manager_(std::move(cache_manager)) {
   decompressors_.emplace_back(std::make_unique<GzipFileDecompressor>());
+  decompressors_.emplace_back(std::make_unique<ZstdFileDecompressor>());
 }
 
 bool LogFilesProvider::CanBeLogFileName(

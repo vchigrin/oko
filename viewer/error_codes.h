@@ -14,6 +14,7 @@ enum class ErrorCodes {
   kFailedMapFile,
   kFileFormatCorrupted,
   kFailedDownloadFile,
+  kDecompressError,
 };
 
 // Define a custom error code category derived from std::error_category

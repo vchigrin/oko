@@ -29,3 +29,9 @@ new_local_repository(
     build_file = "bazel/repos/libzip.BUILD",
     path = "/usr",
 )
+
+new_local_repository(
+    name = "libzstd",
+    build_file = "bazel/repos/libzstd.BUILD",
+    path = "/usr",
+)
