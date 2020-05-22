@@ -5,6 +5,7 @@
 #pragma once
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "viewer/log_file_impl.h"
@@ -14,6 +15,10 @@ namespace oko {
 // Class for parsing log files in some proprientary project.
 class TextLogFile : public LogFileImpl {
  public:
+  explicit TextLogFile(std::filesystem::path file_path)
+      : LogFileImpl(std::move(file_path)) {
+  }
+
   static bool NameMatches(const std::string& file_name) noexcept;
 
  private:

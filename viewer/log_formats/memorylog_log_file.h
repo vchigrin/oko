@@ -5,6 +5,7 @@
 #pragma once
 #include <boost/range/iterator_range.hpp>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "viewer/log_file_impl.h"
@@ -15,6 +16,10 @@ namespace oko {
 // see https://github.com/agrianius/memorylog
 class MemorylogLogFile : public LogFileImpl {
  public:
+  explicit MemorylogLogFile(std::filesystem::path file_path)
+      : LogFileImpl(std::move(file_path)) {
+  }
+
   static bool NameMatches(const std::string& file_name) noexcept;
 
  private:

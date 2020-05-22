@@ -16,10 +16,10 @@ namespace oko {
 // Maps whole file into memory during parsing.
 class LogFileImpl : public LogFile {
  public:
+  explicit LogFileImpl(std::filesystem::path file_path) noexcept;
   // May create inside memory view of the file, so it is expected
   // that file will not be changed or deleted during lifetime of this object.
-  std::error_code Parse(
-      const std::filesystem::path& file_path) noexcept override;
+  std::error_code Parse() noexcept override;
   const std::filesystem::path& file_path() const noexcept override;
 
   const std::vector<LogRecord>& GetRecords() const noexcept override;
@@ -32,7 +32,7 @@ class LogFileImpl : public LogFile {
  private:
   std::vector<LogRecord> records_;
   boost::iostreams::mapped_file_source mapped_file_;
-  std::filesystem::path file_path_;
+  const std::filesystem::path file_path_;
 };
 
 }  // namespace oko

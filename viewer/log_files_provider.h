@@ -5,8 +5,11 @@
 #pragma once
 #include <boost/outcome/outcome.hpp>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
+
+#include "viewer/log_file.h"
 
 namespace oko {
 
@@ -24,13 +27,15 @@ class LogFilesProvider {
   virtual ~LogFilesProvider() = default;
   virtual outcome::std_result<std::vector<LogFileInfo>>
       GetLogFileInfos() noexcept = 0;
-  // Returns path to local files with log contents.
+  // Returns not parsed LogFile instance.
   // |log_file_name| is a name from list, returned by |GetLogFileNames|.
-  virtual outcome::std_result<std::filesystem::path> FetchLog(
+  virtual outcome::std_result<std::unique_ptr<LogFile>> FetchLog(
       const std::string& log_file_name) noexcept = 0;
 
  protected:
   bool CanBeLogFileName(const std::string& file_name) const noexcept;
+  std::unique_ptr<LogFile> CreateFileForPath(
+      std::filesystem::path file_path) const noexcept;
 };
 
 }  // namespace oko

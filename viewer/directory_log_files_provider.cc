@@ -34,9 +34,10 @@ outcome::std_result<std::vector<LogFileInfo>>
   return result;
 }
 
-outcome::std_result<std::filesystem::path> DirectoryLogFilesProvider::FetchLog(
-    const std::string& log_file_name) noexcept {
-  return directory_path_ / log_file_name;
+outcome::std_result<std::unique_ptr<LogFile>>
+    DirectoryLogFilesProvider::FetchLog(
+        const std::string& log_file_name) noexcept {
+  return CreateFileForPath(directory_path_ / log_file_name);
 }
 
 }  // namespace oko

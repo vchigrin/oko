@@ -111,12 +111,12 @@ outcome::std_result<std::vector<LogFileInfo>>
   return result;
 }
 
-outcome::std_result<std::filesystem::path>
+outcome::std_result<std::unique_ptr<LogFile>>
 S3LogFilesProvider::FetchLog(const std::string& log_file_name) noexcept {
   std::filesystem::path dst_path = cache_directory_path_ / log_file_name;
   std::error_code ec;
   if (std::filesystem::exists(dst_path, ec) && !ec) {
-    return dst_path;
+    return CreateFileForPath(dst_path);
   }
   Aws::S3::Model::GetObjectRequest object_request;
   object_request.SetBucket(bucket_name_.c_str());
@@ -148,7 +148,7 @@ S3LogFilesProvider::FetchLog(const std::string& log_file_name) noexcept {
     }
   }
   std::filesystem::rename(tmp_file_path, dst_path);
-  return dst_path;
+  return CreateFileForPath(dst_path);
 }
 
 }  // namespace oko

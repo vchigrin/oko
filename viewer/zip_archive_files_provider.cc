@@ -49,12 +49,13 @@ outcome::std_result<std::vector<LogFileInfo>>
   return result;
 }
 
-outcome::std_result<std::filesystem::path> ZipArchiveFilesProvider::FetchLog(
-    const std::string& log_file_name) noexcept {
+outcome::std_result<std::unique_ptr<LogFile>>
+    ZipArchiveFilesProvider::FetchLog(
+        const std::string& log_file_name) noexcept {
   std::filesystem::path result_path = cache_directory_path_ / log_file_name;
   std::error_code ec;
   if (std::filesystem::exists(result_path, ec) && !ec) {
-    return result_path;
+    return CreateFileForPath(result_path);
   }
 
   auto it = name_to_index_.find(log_file_name);
@@ -92,7 +93,7 @@ outcome::std_result<std::filesystem::path> ZipArchiveFilesProvider::FetchLog(
     }
   }
   std::filesystem::rename(tmp_file_path, result_path);
-  return result_path;
+  return CreateFileForPath(result_path);
 }
 
 }  // namespace oko

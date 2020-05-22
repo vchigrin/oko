@@ -28,7 +28,8 @@ class S3LogFilesProvider : public LogFilesProvider {
   ~S3LogFilesProvider();
   outcome::std_result<std::vector<LogFileInfo>>
       GetLogFileInfos() noexcept override;
-  outcome::std_result<std::filesystem::path> FetchLog(
+
+  outcome::std_result<std::unique_ptr<LogFile>> FetchLog(
       const std::string& log_file_name) noexcept override;
 
  private:

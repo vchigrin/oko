@@ -10,8 +10,9 @@
 #include <boost/format.hpp>
 #include <charconv>
 #include <future>
-#include <utility>
+#include <memory>
 #include <unordered_set>
+#include <utility>
 
 #include "viewer/ui/color_manager.h"
 #include "viewer/ui/message_window.h"
@@ -193,16 +194,17 @@ void LogFilesWindow::SetSelectedItem(size_t new_item) noexcept {
 }
 
 void LogFilesWindow::Finish() noexcept {
-  std::vector<outcome::std_result<std::filesystem::path>> maybe_file_paths;
-  maybe_file_paths.reserve(file_infos_.size());
+  std::vector<outcome::std_result<std::unique_ptr<LogFile>>> maybe_files;
+  maybe_files.reserve(file_infos_.size());
   std::future<void> fetch_async =
       std::async(
         std::launch::async,
-        [this, &maybe_file_paths]() {
+        [this, &maybe_files] {
           for (size_t i = 0; i < file_infos_.size(); ++i) {
             if (i == selected_item_ || file_infos_[i].is_marked) {
-              auto fetch_result = files_provider_->FetchLog(file_infos_[i].name);
-              maybe_file_paths.emplace_back(std::move(fetch_result));
+              auto fetch_result = files_provider_->FetchLog(
+                  file_infos_[i].name);
+              maybe_files.emplace_back(std::move(fetch_result));
             }
           }
         });
@@ -218,13 +220,13 @@ void LogFilesWindow::Finish() noexcept {
   }
   fetch_async.get();
   std::unordered_set<std::error_code> errors;
-  fetched_file_paths_.clear();
-  if (!maybe_file_paths.empty()) {
-    for (auto& maybe_path : maybe_file_paths) {
-      if (!maybe_path) {
-        errors.emplace(std::move(maybe_path.error()));
+  fetched_files_.clear();
+  if (!maybe_files.empty()) {
+    for (auto& maybe_file : maybe_files) {
+      if (!maybe_file) {
+        errors.emplace(std::move(maybe_file.error()));
       } else {
-        fetched_file_paths_.emplace_back(std::move(maybe_path.value()));
+        fetched_files_.emplace_back(std::move(maybe_file.value()));
       }
     }
   }

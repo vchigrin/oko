@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <memory>
 #include <optional>
 #include <regex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "viewer/log_files_provider.h"
@@ -28,9 +30,8 @@ class LogFilesWindow : public Window {
     return finished_;
   }
 
-  const std::vector<std::filesystem::path>&
-      fetched_file_paths() const noexcept {
-    return fetched_file_paths_;
+  std::vector<std::unique_ptr<LogFile>> RetrieveFetchedFiles() noexcept {
+    return std::move(fetched_files_);
   }
 
   void SearchForFilesByMask(std::string mask) noexcept;
@@ -51,7 +52,7 @@ class LogFilesWindow : public Window {
   int selected_color_pair_ = 0;
   int selected_marked_color_pair_ = 0;
   int marked_color_pair_ = 0;
-  std::vector<std::filesystem::path> fetched_file_paths_;
+  std::vector<std::unique_ptr<LogFile>> fetched_files_;
 
   struct LogFileInfoAndMark : public LogFileInfo {
     LogFileInfoAndMark(LogFileInfo& second)

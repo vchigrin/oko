@@ -111,7 +111,7 @@ void ShowFiles(std::vector<std::unique_ptr<oko::LogFile>> files) {
   }
 }
 
-std::vector<std::filesystem::path> RunChooseFile(
+std::vector<std::unique_ptr<oko::LogFile>> RunChooseFile(
     oko::LogFilesProvider& files_provider) noexcept {
   int num_rows = 0, num_columns = 0;
   getmaxyx(stdscr, num_rows, num_columns);
@@ -161,7 +161,7 @@ std::vector<std::filesystem::path> RunChooseFile(
       current_dialog.reset();
     }
   }
-  return window.fetched_file_paths();
+  return window.RetrieveFetchedFiles();
 }
 
 int main(int argc, char* argv[]) {
@@ -194,20 +194,14 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  struct FileWithPath {
-    std::unique_ptr<oko::LogFile> file;
-    std::filesystem::path log_path;
-  };
-  std::vector<FileWithPath> files_with_paths;
+  std::vector<std::unique_ptr<oko::LogFile>> files;
   oko::WithTUI tui_initializer;
   if (vm.count("memorylog")) {
-    files_with_paths.push_back({
-        std::make_unique<oko::MemorylogLogFile>(),
-        vm["memorylog"].as<std::string>()});
+    files.emplace_back(std::make_unique<oko::MemorylogLogFile>(
+        vm["memorylog"].as<std::string>()));
   } else if (vm.count("textlog")) {
-    files_with_paths.push_back({
-        std::make_unique<oko::TextLogFile>(),
-        vm["textlog"].as<std::string>()});
+    files.emplace_back(std::make_unique<oko::TextLogFile>(
+        vm["textlog"].as<std::string>()));
   } else if (vm.count("directory") || vm.count("s3") || vm.count("zip")) {
     std::unique_ptr<oko::LogFilesProvider> provider;
     if (vm.count("directory")) {
@@ -250,22 +244,9 @@ int main(int argc, char* argv[]) {
           std::move(maybe_cache_dir.value()),
           std::move(s3_url));
     }
-    auto log_paths = RunChooseFile(*provider);
-    if (log_paths.empty()) {
+    files = RunChooseFile(*provider);
+    if (files.empty()) {
       return 1;
-    }
-    for (const auto& log_path : log_paths) {
-      FileWithPath item;
-      if (oko::TextLogFile::NameMatches(log_path.filename())) {
-        item.file = std::make_unique<oko::TextLogFile>();
-      } else if (oko::MemorylogLogFile::NameMatches(log_path.filename())) {
-        item.file = std::make_unique<oko::MemorylogLogFile>();
-      } else {
-        assert(false);
-        return 1;
-      }
-      item.log_path = std::move(log_path);
-      files_with_paths.emplace_back(std::move(item));
     }
   } else {
     // Check in code above should exit program in this case.
@@ -274,9 +255,9 @@ int main(int argc, char* argv[]) {
   }
   std::future<std::error_code> parse_async = std::async(
       std::launch::async,
-      [&files_with_paths] {
-        for (const auto& [file, log_path] : files_with_paths) {
-          std::error_code ec = file->Parse(log_path);
+      [&files] {
+        for (const auto& file : files) {
+          std::error_code ec = file->Parse();
           if (ec) {
             return ec;
           }
@@ -297,14 +278,6 @@ int main(int argc, char* argv[]) {
         "Failed parse file. %1%.") % parse_result.message()));
     return 1;
   }
-  std::vector<std::unique_ptr<oko::LogFile>> files(files_with_paths.size());
-  std::transform(
-      files_with_paths.begin(),
-      files_with_paths.end(),
-      files.begin(),
-      [](FileWithPath& f) {
-        return std::move(f.file);
-      });
   ShowFiles(std::move(files));
   return 0;
 }

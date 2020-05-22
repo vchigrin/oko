@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -17,7 +18,8 @@ class DirectoryLogFilesProvider : public LogFilesProvider {
       std::filesystem::path directory_path) noexcept;
   outcome::std_result<std::vector<LogFileInfo>>
       GetLogFileInfos() noexcept override;
-  outcome::std_result<std::filesystem::path> FetchLog(
+
+  outcome::std_result<std::unique_ptr<LogFile>> FetchLog(
       const std::string& log_file_name) noexcept override;
 
  private:
