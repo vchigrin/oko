@@ -13,9 +13,11 @@
 namespace oko {
 
 ZipArchiveFilesProvider::ZipArchiveFilesProvider(
+    std::unique_ptr<CacheDirectoriesManager> cache_manager,
     std::filesystem::path cache_directory_path,
     std::filesystem::path zip_file_path) noexcept
-    : cache_directory_path_(std::move(cache_directory_path)),
+    : LogFilesProvider(std::move(cache_manager)),
+      cache_directory_path_(std::move(cache_directory_path)),
       zip_file_(
           zip_open(zip_file_path.native().c_str(), ZIP_RDONLY, nullptr),
           &zip_close) {

@@ -23,6 +23,7 @@ class S3LogFilesProvider : public LogFilesProvider {
   // |cache_directory_path| must exist and must be dedicated to
   // exactly this |directory_url|
   S3LogFilesProvider(
+      std::unique_ptr<CacheDirectoriesManager> cache_manager,
       std::filesystem::path cache_directory_path,
       std::string s3_directory_url) noexcept;
   ~S3LogFilesProvider();

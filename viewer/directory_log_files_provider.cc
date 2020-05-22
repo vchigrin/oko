@@ -10,8 +10,10 @@ namespace oko {
 
 // Lists log files in directory, non-recursively.
 DirectoryLogFilesProvider::DirectoryLogFilesProvider(
+    std::unique_ptr<CacheDirectoriesManager> cache_manager,
     std::filesystem::path directory_path) noexcept
-    : directory_path_(std::move(directory_path)) {
+    : LogFilesProvider(std::move(cache_manager)),
+      directory_path_(std::move(directory_path)) {
 }
 
 outcome::std_result<std::vector<LogFileInfo>>

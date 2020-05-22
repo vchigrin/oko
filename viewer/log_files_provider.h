@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+#include "viewer/cache_directories_manager.h"
+#include "viewer/file_decompressor.h"
 #include "viewer/log_file.h"
 
 namespace oko {
@@ -24,6 +26,8 @@ struct LogFileInfo {
 // and fetching their content.
 class LogFilesProvider {
  public:
+  explicit LogFilesProvider(
+      std::unique_ptr<CacheDirectoriesManager> cache_manager) noexcept;
   virtual ~LogFilesProvider() = default;
   virtual outcome::std_result<std::vector<LogFileInfo>>
       GetLogFileInfos() noexcept = 0;
@@ -34,8 +38,10 @@ class LogFilesProvider {
 
  protected:
   bool CanBeLogFileName(const std::string& file_name) const noexcept;
-  std::unique_ptr<LogFile> CreateFileForPath(
+  outcome::std_result<std::unique_ptr<LogFile>> CreateFileForPath(
       std::filesystem::path file_path) const noexcept;
+  std::vector<std::unique_ptr<FileDecompressor>> decompressors_;
+  std::unique_ptr<CacheDirectoriesManager> cache_manager_;
 };
 
 }  // namespace oko

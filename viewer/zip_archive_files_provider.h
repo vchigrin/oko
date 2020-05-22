@@ -20,6 +20,7 @@ namespace oko {
 class ZipArchiveFilesProvider : public LogFilesProvider {
  public:
   ZipArchiveFilesProvider(
+      std::unique_ptr<CacheDirectoriesManager> cache_manager,
       std::filesystem::path cache_directory_path,
       std::filesystem::path zip_file_path) noexcept;
 

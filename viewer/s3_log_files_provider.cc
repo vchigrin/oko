@@ -42,9 +42,11 @@ bool SplitUrl(
 
 // Lists log files in directory, non-recursively.
 S3LogFilesProvider::S3LogFilesProvider(
+    std::unique_ptr<CacheDirectoriesManager> cache_manager,
     std::filesystem::path cache_directory_path,
     std::string s3_directory_url) noexcept
-    : cache_directory_path_(std::move(cache_directory_path)) {
+    : LogFilesProvider(std::move(cache_manager)),
+    cache_directory_path_(std::move(cache_directory_path)) {
   SplitUrl(std::move(s3_directory_url), &bucket_name_, &s3_directory_name_);
   if (!s3_directory_name_.empty() && s3_directory_name_.back() != '/') {
     s3_directory_name_ += '/';

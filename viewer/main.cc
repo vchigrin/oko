@@ -196,6 +196,12 @@ int main(int argc, char* argv[]) {
 
   std::vector<std::unique_ptr<oko::LogFile>> files;
   oko::WithTUI tui_initializer;
+  std::unique_ptr<oko::CacheDirectoriesManager> cache_manager =
+      std::make_unique<oko::CacheDirectoriesManager>();
+  if (!cache_manager->is_initialized()) {
+    oko::MessageWindow::PostSync("Failed initialize cache");
+    return 1;
+  }
   if (vm.count("memorylog")) {
     files.emplace_back(std::make_unique<oko::MemorylogLogFile>(
         vm["memorylog"].as<std::string>()));
@@ -206,16 +212,12 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<oko::LogFilesProvider> provider;
     if (vm.count("directory")) {
       provider = std::make_unique<oko::DirectoryLogFilesProvider>(
+          std::move(cache_manager),
           vm["directory"].as<std::string>());
     } else if (vm.count("zip")) {
       std::string file_path = vm["zip"].as<std::string>();
-      oko::CacheDirectoriesManager cache_manager;
-      if (!cache_manager.is_initialized()) {
-        oko::MessageWindow::PostSync("Failed initialize cache");
-        return 1;
-      }
       oko::outcome::std_result<std::filesystem::path> maybe_cache_dir =
-          cache_manager.DirectoryForFile(file_path);
+          cache_manager->DirectoryForFile(file_path);
       if (!maybe_cache_dir) {
         oko::MessageWindow::PostSync(boost::str(boost::format(
             "Failed initialize cache entry. %1%.") %
@@ -223,17 +225,13 @@ int main(int argc, char* argv[]) {
         return 1;
       }
       provider = std::make_unique<oko::ZipArchiveFilesProvider>(
+          std::move(cache_manager),
           std::move(maybe_cache_dir.value()),
           std::move(file_path));
     } else if (vm.count("s3")) {
       std::string s3_url = vm["s3"].as<std::string>();
-      oko::CacheDirectoriesManager cache_manager;
-      if (!cache_manager.is_initialized()) {
-        oko::MessageWindow::PostSync("Failed initialize cache");
-        return 1;
-      }
       oko::outcome::std_result<std::filesystem::path> maybe_cache_dir =
-          cache_manager.DirectoryForS3Url(s3_url);
+          cache_manager->DirectoryForS3Url(s3_url);
       if (!maybe_cache_dir) {
         oko::MessageWindow::PostSync(boost::str(boost::format(
             "Failed initialize cache entry. %1%.") %
@@ -241,6 +239,7 @@ int main(int argc, char* argv[]) {
         return 1;
       }
       provider = std::make_unique<oko::S3LogFilesProvider>(
+          std::move(cache_manager),
           std::move(maybe_cache_dir.value()),
           std::move(s3_url));
     }
