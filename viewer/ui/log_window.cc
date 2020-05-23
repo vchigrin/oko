@@ -148,6 +148,7 @@ void LogWindow::DisplayImpl() noexcept {
       wattroff(window_.get(), A_REVERSE);
     }
   }
+  wclrtobot(window_.get());
 }
 
 void LogWindow::DisplayTime(
