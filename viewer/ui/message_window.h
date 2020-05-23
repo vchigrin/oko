@@ -4,6 +4,7 @@
 
 #pragma once
 #include <functional>
+#include <memory>
 #include <string>
 
 #include "viewer/ui/window.h"
@@ -21,6 +22,7 @@ class MessageWindow : public Window {
   void DisplayImpl() noexcept override;
 
   const std::string message_;
+  std::unique_ptr<WINDOW, int(*)(WINDOW*)> text_window_;
   int button_color_pair_ = 0;
 };
 

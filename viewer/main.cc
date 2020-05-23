@@ -31,7 +31,39 @@
 
 namespace po = boost::program_options;
 
+static const char kMainHelpMessage[] = (
+  "F1              Show this help message\n"
+  "F2, =           Remove all filters\n"
+  "F3, -           Remove last added filter\n"
+  "F4, g           Go to timestamp\n"
+  "F5, i           Add include pattern filter\n"
+  "F6, e           Add exlude pattern filter\n"
+  "F7, /           Search for pattern\n"
+  "F8, n           Search next pattern occurence\n"
+  "N               Search prev pattern occurence\n"
+  "F9, v           Add log level filter\n"
+  "F10, m          Toggle marking mode\n"
+  "F11, q          Exit\n"
+  "F12, t          Toggle time format\n"
+  "j, down arrow   One line down\n"
+  "k, up arrow     One line up\n"
+  "h, left arrow   Scroll left\n"
+  "l, right arrow  Scroll right\n"
+);
+
+static const char kFileChooserHelpMessage[] = (
+  "F1              Show this help message\n"
+  "F7, /           Search for pattern\n"
+  "F8, n           Search next pattern occurence\n"
+  "F9, N           Search prev pattern occurence\n"
+  "F10, m          Mark current file\n"
+  "F11, q          Exit\n"
+  "j, down arrow   One line down\n"
+  "k, up arrow     One line up\n"
+);
+
 void ConfigureFunctionLabels(oko::FunctionBarWindow& wnd) noexcept {
+  wnd.SetLabel(1, "Help");
   wnd.SetLabel(2, "RmAllFilters");
   wnd.SetLabel(3, "RmLastFilter");
   wnd.SetLabel(4, "GoToTimestam");
@@ -41,8 +73,8 @@ void ConfigureFunctionLabels(oko::FunctionBarWindow& wnd) noexcept {
   wnd.SetLabel(8, "SearchNext");
   wnd.SetLabel(9, "LevelFilter");
   wnd.SetLabel(10, "ToggleMark");
-  wnd.SetLabel(11, "Toggle time format");
-  wnd.SetLabel(12, "Quit");
+  wnd.SetLabel(11, "Quit");
+  wnd.SetLabel(12, "Toggle time format");
 }
 
 void ShowFiles(std::vector<std::unique_ptr<oko::LogFile>> files) {
@@ -62,6 +94,9 @@ void ShowFiles(std::vector<std::unique_ptr<oko::LogFile>> files) {
       current_dialog->HandleKeyPress(key);
     } else {
       switch (key) {
+        case KEY_F(1):
+          oko::MessageWindow::PostSync(kMainHelpMessage);
+          break;
         case 'q':
         case KEY_F(11):
           should_run = false;
@@ -125,11 +160,12 @@ std::vector<std::unique_ptr<oko::LogFile>> RunChooseFile(
       0, 0, num_rows - oko::FunctionBarWindow::kRows, num_columns);
   oko::FunctionBarWindow func_window(
       num_rows - oko::FunctionBarWindow::kRows, 0, num_columns);
-  func_window.SetLabel(12, "Quit");
+  func_window.SetLabel(1, "Help");
   func_window.SetLabel(7, "Search");
   func_window.SetLabel(8, "SearchNext");
   func_window.SetLabel(9, "SearchPrev");
   func_window.SetLabel(10, "ToggleMark");
+  func_window.SetLabel(11, "Quit");
   std::unique_ptr<oko::DialogWindow> current_dialog;
 
   while (!window.finished()) {
@@ -143,6 +179,9 @@ std::vector<std::unique_ptr<oko::LogFile>> RunChooseFile(
       current_dialog->HandleKeyPress(key);
     } else {
       switch (key) {
+        case KEY_F(1):
+          oko::MessageWindow::PostSync(kFileChooserHelpMessage);
+          break;
         case 'q':
         case KEY_F(11):
           return {};
