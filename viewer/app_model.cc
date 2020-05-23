@@ -25,21 +25,11 @@ AppModel::AppModel(std::vector<std::unique_ptr<LogFile>> files)
   }
 }
 
-AppModel::~AppModel() {
-  for (auto* filter : active_filters_) {
-    delete filter;
-  }
-}
+AppModel::~AppModel() = default;
 
-void AppModel::AppendFilter(
-    std::string pattern,
-    bool is_include_filter) noexcept {
-  oko::LogPatternFilter* new_filter = new oko::LogPatternFilter(
-      &active_view(),
-      std::move(pattern),
-      is_include_filter);
+void AppModel::AppendFilter(std::unique_ptr<LogFilter> new_filter) noexcept {
   FilterSetChangeInfo info = BeforeFilterSetChanged();
-  active_filters_.push_back(new_filter);
+  active_filters_.emplace_back(std::move(new_filter));
   AfterFilterSetChanged(std::move(info));
 }
 
@@ -48,9 +38,6 @@ void AppModel::RemoveAllFilters() noexcept {
     return;
   }
   FilterSetChangeInfo info = BeforeFilterSetChanged();
-  for (auto* filter : active_filters_) {
-    delete filter;
-  }
   active_filters_.clear();
   AfterFilterSetChanged(std::move(info));
 }
@@ -60,7 +47,6 @@ void AppModel::RemoveLastFilter() noexcept {
     return;
   }
   FilterSetChangeInfo info = BeforeFilterSetChanged();
-  delete active_filters_.back();
   active_filters_.pop_back();
   AfterFilterSetChanged(std::move(info));
 }

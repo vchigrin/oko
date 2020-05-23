@@ -8,6 +8,8 @@
 #include <utility>
 #include <boost/algorithm/string/trim.hpp>
 
+#include "viewer/log_pattern_filter.h"
+
 namespace oko {
 
 AddPatternFilterDialog::AddPatternFilterDialog(
@@ -29,8 +31,10 @@ bool AddPatternFilterDialog::HandleEnter() noexcept {
   boost::algorithm::trim_right(entered_string);
   if (!entered_string.empty()) {
     app_model_->AppendFilter(
-        std::move(entered_string),
-        is_include_filter_);
+        std::make_unique<LogPatternFilter>(
+            &app_model_->active_view(),
+            std::move(entered_string),
+            is_include_filter_));
   }
   return true;
 }

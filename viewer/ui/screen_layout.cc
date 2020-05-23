@@ -61,7 +61,8 @@ void ScreenLayout::HandleKeyPress(int key) noexcept {
   log_window_.HandleKeyPress(key);
 }
 
-void ScreenLayout::FilterSetChanged(const std::vector<LogPatternFilter*>&) {
+void ScreenLayout::FilterSetChanged(
+    const std::vector<std::unique_ptr<LogFilter>>&) {
   RecalcPositions();
 }
 

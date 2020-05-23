@@ -310,7 +310,7 @@ size_t LogWindow::GetDisplayedRecordAfterLast() const noexcept {
 }
 
 void LogWindow::FilterSetChanged(
-    const std::vector<LogPatternFilter*>&) noexcept {
+    const std::vector<std::unique_ptr<LogFilter>>&) noexcept {
   view_ = &app_model_->active_view();
   first_shown_record_ = 0;
   message_horz_offset_ = 0;

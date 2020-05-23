@@ -20,7 +20,7 @@ LogPatternFilter::LogPatternFilter(
     if (has_pattern == is_include_filter) {
       filtered_records_.emplace_back(rec);
     } else {
-      ++filtered_records_count_;
+      ++filtered_out_records_count_;
     }
   }
 }

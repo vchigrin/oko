@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 #pragma once
+#include <memory>
 #include <utility>
 #include <vector>
 
 #include "viewer/app_model.h"
-#include "viewer/log_pattern_filter.h"
+#include "viewer/log_filter.h"
 #include "viewer/ui/window.h"
 
 namespace oko {
@@ -26,15 +27,17 @@ class FilterListWindow : public Window {
 
  private:
   void FilterSetChanged(
-      const std::vector<LogPatternFilter*>& active_filters) noexcept;
+      const std::vector<std::unique_ptr<LogFilter>>&
+          new_active_filters) noexcept;
   void DisplayImpl() noexcept override;
   void DisplayBorders() noexcept;
 
   AppModel* app_model_;
   boost::signals2::scoped_connection filter_set_changed_conn_;
-  std::vector<LogPatternFilter*> active_filters_;
-  int include_filter_color_pair_ = 0;
-  int exclude_filter_color_pair_ = 0;
+  std::vector<LogFilter*> active_filters_;
+  int include_pattern_filter_color_pair_ = 0;
+  int exclude_pattern_filter_color_pair_ = 0;
+  int include_level_filter_color_pair_ = 0;
 };
 
 }  // namespace oko

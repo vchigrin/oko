@@ -30,9 +30,10 @@ DialogWindow::DialogWindow(size_t field_count) noexcept
   const int start_col = std::max(0, (max_col - width_) / 2);
   const int start_row = std::max(0, (max_row - height_) / 2);
   Move(start_row, start_col, height_, width_);
-  subwindow_.reset(derwin(window_.get(), height_ - 2, width_ - 2, 1, 1));
-  // Very visible cursor
-  prev_cursor_state_ = curs_set(2);
+  // Very visible cursor if we have any fields.
+  if (fields_.size() > 1) {
+    prev_cursor_state_ = curs_set(2);
+  }
 }
 
 void DialogWindow::InitForm() noexcept {
@@ -44,9 +45,28 @@ void DialogWindow::InitForm() noexcept {
 }
 
 DialogWindow::~DialogWindow() {
-  unpost_form(form_.get());
-  free_field(fields_[0]);
-  curs_set(prev_cursor_state_);
+  if (form_) {
+    unpost_form(form_.get());
+  }
+  for (FIELD* field : fields_) {
+    if (field) {
+      free_field(field);
+    }
+  }
+  if (fields_.size() > 1) {
+    curs_set(prev_cursor_state_);
+  }
+}
+
+void DialogWindow::Move(
+    int start_row, int start_col,
+    int num_rows, int num_columns) noexcept {
+  Window::Move(start_row, start_col, num_rows, num_columns);
+  if (!visible_) {
+    return;
+  }
+  subwindow_.reset(
+      derwin(window_.get(), num_rows_ - 2, num_columns_ - 2, 1, 1));
 }
 
 void DialogWindow::DisplayImpl() noexcept {

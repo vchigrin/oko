@@ -34,7 +34,8 @@ class LogWindow : public Window {
   void DisplayTime(bool is_marked,
       const LogRecord::time_point time_point) noexcept;
   void MaybeExtendMarking() noexcept;
-  void FilterSetChanged(const std::vector<LogPatternFilter*>&) noexcept;
+  void FilterSetChanged(
+      const std::vector<std::unique_ptr<LogFilter>>&) noexcept;
   void SelectedRecordChanged(size_t selected_record) noexcept;
   void CreateTimeFormatter() noexcept;
 

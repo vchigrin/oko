@@ -12,7 +12,7 @@
 #include <boost/signals2/signal.hpp>
 
 #include "viewer/log_file.h"
-#include "viewer/log_pattern_filter.h"
+#include "viewer/log_filter.h"
 #include "viewer/merged_log_view.h"
 
 namespace oko {
@@ -48,13 +48,11 @@ class AppModel {
     return active_view().GetRecords().size();
   }
 
-  void AppendFilter(
-      std::string pattern,
-      bool is_include_filter) noexcept;
+  void AppendFilter(std::unique_ptr<LogFilter> new_filter) noexcept;
   void RemoveAllFilters() noexcept;
   void RemoveLastFilter() noexcept;
 
-  const std::vector<oko::LogPatternFilter*>&
+  const std::vector<std::unique_ptr<oko::LogFilter>>&
       active_filters() const noexcept {
     return active_filters_;
   }
@@ -105,7 +103,7 @@ class AppModel {
   }
 
   using FilterSetChangedSignature = void (
-      const std::vector<oko::LogPatternFilter*>&);
+      const std::vector<std::unique_ptr<LogFilter>>&);
   // Argument is new |selected_record()| value.
   using SelectedRecordChangedSignature = void (size_t);
 
@@ -135,7 +133,7 @@ class AppModel {
   const std::vector<std::unique_ptr<LogFile>> files_;
   //  May be nullptr if |files_| have only one item.
   std::unique_ptr<MergedLogView> merger_;
-  std::vector<LogPatternFilter*> active_filters_;
+  std::vector<std::unique_ptr<LogFilter>> active_filters_;
   // Index of first marked record, inclusively.
   size_t marked_records_begin_ = 0;
   // One plus index of last marked record.

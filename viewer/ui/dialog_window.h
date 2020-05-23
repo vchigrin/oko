@@ -15,7 +15,7 @@ namespace oko {
 
 class DialogWindow : public Window {
  public:
-  // |field_count| counts only real fields, without trailint nullptr
+  // |field_count| counts only real fields, without trailing nullptr
   // |fields_| entry.
   explicit DialogWindow(size_t field_count) noexcept;
   virtual ~DialogWindow();
@@ -27,6 +27,9 @@ class DialogWindow : public Window {
   }
 
  protected:
+  void Move(
+      int start_row, int start_col,
+      int num_rows, int num_columns) noexcept override;
   // Called when user pressed |Enter| in dialog. Returning true causes
   // dialog to become "finished()".
   virtual bool HandleEnter() noexcept = 0;

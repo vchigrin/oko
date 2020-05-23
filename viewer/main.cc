@@ -17,6 +17,7 @@
 #include "viewer/log_formats/memorylog_log_file.h"
 #include "viewer/log_formats/text_log_file.h"
 #include "viewer/s3_log_files_provider.h"
+#include "viewer/ui/add_level_filter_dialog.h"
 #include "viewer/ui/add_pattern_filter_dialog.h"
 #include "viewer/ui/go_to_timestamp_dialog.h"
 #include "viewer/ui/log_files_window.h"
@@ -38,7 +39,7 @@ void ConfigureFunctionLabels(oko::FunctionBarWindow& wnd) noexcept {
   wnd.SetLabel(6, "ExlFilter");
   wnd.SetLabel(7, "Search");
   wnd.SetLabel(8, "SearchNext");
-  wnd.SetLabel(9, "SearchPrev");
+  wnd.SetLabel(9, "LevelFilter");
   wnd.SetLabel(10, "ToggleMark");
   wnd.SetLabel(11, "Toggle time format");
   wnd.SetLabel(12, "Quit");
@@ -77,6 +78,11 @@ void ShowFiles(std::vector<std::unique_ptr<oko::LogFile>> files) {
               &model,
               /* is_include_filter */ false);
           break;
+        case 'v':
+        case KEY_F(9):
+          current_dialog = std::make_unique<oko::AddLevelFilterDialog>(
+              &model);
+          break;
         case '=':
         case KEY_F(2):
           model.RemoveAllFilters();
@@ -98,7 +104,6 @@ void ShowFiles(std::vector<std::unique_ptr<oko::LogFile>> files) {
           model.SearchNextEntry();
           break;
         case 'N':
-        case KEY_F(9):
           model.SearchPrevEntry();
           break;
         default:

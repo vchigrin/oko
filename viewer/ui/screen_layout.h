@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include "viewer/app_model.h"
@@ -39,7 +40,7 @@ class ScreenLayout {
 
  private:
   void FilterSetChanged(
-      const std::vector<LogPatternFilter*>& active_filters);
+      const std::vector<std::unique_ptr<LogFilter>>& active_filters);
 
   AppModel* app_model_;
   LogWindow log_window_;

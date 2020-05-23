@@ -5,7 +5,11 @@
 #include "viewer/ui/filters_list_window.h"
 
 #include <algorithm>
+#include <string>
+#include <unordered_set>
 
+#include "viewer/log_level_filter.h"
+#include "viewer/log_pattern_filter.h"
 #include "viewer/ui/color_manager.h"
 #include "viewer/ui/ncurses_helpers.h"
 
@@ -13,7 +17,33 @@ namespace oko {
 
 namespace {
 const int kFilteredOutColumnSize = 16;
-const int kTypeColumnSize = 8;
+const std::string_view kIncludePatternStr = "Incl pattern:";
+const std::string_view kExcludePatternStr = "Excl pattern:";
+const std::string_view kIncludeLevelStr = "Incl levels:";
+
+const int kTypeColumnSize = std::max({
+    kIncludePatternStr.size(),
+    kExcludePatternStr.size(),
+    kIncludeLevelStr.size()
+});
+
+std::string LevelSetToString(
+    const std::unordered_set<LogLevel>& levels) {
+  std::vector<LogLevel> sorted_levels{levels.begin(), levels.end()};
+  std::sort(sorted_levels.begin(), sorted_levels.end());
+
+  std::stringstream result;
+  bool first = true;
+  for (LogLevel level : sorted_levels) {
+    if (!first) {
+      result << " ";
+    }
+    result << level;
+    first = false;
+  }
+  return result.str();
+}
+
 }  // namespace
 
 FilterListWindow::FilterListWindow(
@@ -24,8 +54,12 @@ FilterListWindow::FilterListWindow(
     : Window(start_row, start_col, 1, num_columns),
       app_model_(model) {
   ColorManager& cm = ColorManager::instance();
-  include_filter_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_GREEN);
-  exclude_filter_color_pair_ = cm.RegisterColorPair(COLOR_BLACK, COLOR_RED);
+  include_pattern_filter_color_pair_ = cm.RegisterColorPair(
+      COLOR_BLACK, COLOR_GREEN);
+  exclude_pattern_filter_color_pair_ = cm.RegisterColorPair(
+      COLOR_BLACK, COLOR_RED);
+  include_level_filter_color_pair_ = cm.RegisterColorPair(
+      COLOR_BLACK, COLOR_BLUE);
 
   filter_set_changed_conn_ =
       app_model_->ConnectFilterSetChanged(
@@ -48,30 +82,42 @@ void FilterListWindow::DisplayImpl() noexcept {
   int cur_row = 1;
   int old_bkgd = getbkgd(window_.get());
   const int max_x = getmaxx(window_.get());
-  const int max_pattern_len = std::max(
+  const int max_description_len = std::max(
       0, max_x - kFilteredOutColumnSize - kTypeColumnSize);
   const int filtered_out_start = max_x - kFilteredOutColumnSize;
 
-  static const std::string_view kIncludeType = "Incl:";
-  static const std::string_view kExcludeType = "Excl:";
-  for (LogPatternFilter* filter : active_filters_) {
-    wbkgdset(window_.get(),
-        filter->is_include_filter() ?
-            COLOR_PAIR(include_filter_color_pair_) :
-            COLOR_PAIR(exclude_filter_color_pair_));
-    const auto& type =
-        filter->is_include_filter() ? kIncludeType : kExcludeType;
-    mvwaddstr(
-        window_.get(),
-        cur_row, 0,
-        type.data());
+  for (LogFilter* filter : active_filters_) {
+    const std::string_view* type_str = nullptr;
+    int color = -1;
+    std::string description;
+    switch (filter->type()) {
+      case LogFilter::Type::kIncludePattern:
+        type_str = &kIncludePatternStr;
+        color = include_pattern_filter_color_pair_;
+        description = static_cast<LogPatternFilter*>(filter)->pattern();
+        break;
+      case LogFilter::Type::kExcludePattern:
+        type_str = &kExcludePatternStr;
+        color = exclude_pattern_filter_color_pair_;
+        description = static_cast<LogPatternFilter*>(filter)->pattern();
+        break;
+      case LogFilter::Type::kLevel:
+        type_str = &kIncludeLevelStr;
+        color = include_level_filter_color_pair_;
+        description = LevelSetToString(
+            static_cast<LogLevelFilter*>(filter)->levels_to_include());
+        break;
+    }
+
+    wbkgdset(window_.get(), COLOR_PAIR(color));
+    mvwaddstr(window_.get(), cur_row, 0, type_str->data());
     wclrtoeol(window_.get());
-    if (max_pattern_len) {
+    if (max_description_len) {
       mvwaddnstr(
           window_.get(),
           cur_row, kTypeColumnSize,
-          filter->pattern().c_str(),
-          max_pattern_len);
+          description.c_str(),
+          max_description_len);
     }
     mvwprintw(
         window_.get(),
@@ -102,8 +148,16 @@ void FilterListWindow::DisplayBorders() noexcept {
 }
 
 void FilterListWindow::FilterSetChanged(
-    const std::vector<LogPatternFilter*>& active_filters) noexcept {
-  active_filters_ = active_filters;
+    const std::vector<std::unique_ptr<LogFilter>>&
+        new_active_filters) noexcept {
+  active_filters_.resize(new_active_filters.size());
+  std::transform(
+      new_active_filters.begin(),
+      new_active_filters.end(),
+      active_filters_.begin(),
+      [](const std::unique_ptr<LogFilter>& f) {
+        return f.get();
+      });
 }
 
 }  // namespace oko

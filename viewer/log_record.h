@@ -5,6 +5,7 @@
 #pragma once
 #include <cassert>
 #include <chrono>
+#include <ostream>
 #include <string_view>
 
 
@@ -16,7 +17,30 @@ enum class LogLevel {
   Info,
   Warning,
   Error,
+  AfterLast,  // Never appears in LogRecords.
 };
+
+inline std::ostream& operator << (std::ostream& stream, LogLevel l) {
+  switch (l) {
+  case LogLevel::Invalid:
+  case LogLevel::AfterLast:
+    stream << "Invalid";
+    break;
+  case LogLevel::Debug:
+    stream << "DEBUG";
+    break;
+  case LogLevel::Info:
+    stream << "INFO";
+    break;
+  case LogLevel::Warning:
+    stream << "WARNING";
+    break;
+  case LogLevel::Error:
+    stream << "ERROR";
+    break;
+  }
+  return stream;
+}
 
 class LogRecord {
  public:
