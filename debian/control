@@ -1,0 +1,26 @@
+Source: oko
+Section: misc
+Priority: optional
+Maintainer: Vyacheslav Chigrin <vyacheslav.chigrin@yandex.ru>
+Build-Depends: debhelper (>= 10),
+  aws-sdk-cpp-core-dev,
+  aws-sdk-cpp-s3-dev (>= 1.7.337-1),
+  aws-sdk-cpp-s3-dev,
+  bazel (>= 3.1),
+  chrpath,
+  clang-9,
+  libc++-9-dev,
+  libc++abi-9-dev,
+  libncurses-dev,
+  libzip-dev,
+  libzstd-dev,
+  zlib1g-dev,
+Standards-Version: 4.1.2
+Homepage: https://github.com/vchigrin/oko
+Vcs-Git: https://github.com/vchigrin/oko.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/oko.git
+
+Package: oko
+Architecture: any
+Depends: aws-sdk-cpp-core, aws-sdk-cpp-s3, ${shlibs:Depends}, ${misc:Depends}
+Description: Ncurses-based log viewer.

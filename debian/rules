@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+export DH_VERBOSE = 1
+
+
+%:
+	dh $@
+
+oko:
+	bazel --output_user_root=/tmp/bazel build --compilation_mode=opt //viewer:oko
+	cp bazel-bin/viewer/oko .
+	chmod +w oko
+	chrpath -r /opt/aws-sdk-cpp/lib/ oko
+	chmod -w oko
+
+build: oko
