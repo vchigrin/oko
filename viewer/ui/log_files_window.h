@@ -5,7 +5,6 @@
 #pragma once
 #include <memory>
 #include <optional>
-#include <regex>
 #include <string>
 #include <utility>
 #include <vector>
@@ -34,7 +33,7 @@ class LogFilesWindow : public Window {
     return std::move(fetched_files_);
   }
 
-  void SearchForFilesByMask(std::string mask) noexcept;
+  void SearchForFilesBySubstring(std::string str) noexcept;
   void SearchNextEntry() noexcept;
   void SearchPrevEntry() noexcept;
 
@@ -61,7 +60,7 @@ class LogFilesWindow : public Window {
     bool is_marked = false;
   };
   std::vector<LogFileInfoAndMark> file_infos_;
-  std::optional<std::regex> regex_to_search_;
+  std::optional<std::string> string_to_search_;
 };
 
 }  // namespace oko
