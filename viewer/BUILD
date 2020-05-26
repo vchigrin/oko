@@ -78,6 +78,7 @@ cc_binary(
         "@boost//:program_options",
         "@libcxx",
         "@libzip",
+        "@libzlib",
         "@libzstd",
         "@ncurses",
         "@ncurses//:forms",

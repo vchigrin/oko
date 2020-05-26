@@ -21,7 +21,7 @@ new_local_repository(
 new_local_repository(
     name = "aws_sdk",
     build_file = "bazel/repos/aws_sdk.BUILD",
-    path = "/opt/aws-sdk-cpp-1.7.337",
+    path = "/opt/aws-sdk-cpp",
 )
 
 new_local_repository(
@@ -33,5 +33,11 @@ new_local_repository(
 new_local_repository(
     name = "libzstd",
     build_file = "bazel/repos/libzstd.BUILD",
+    path = "/usr",
+)
+
+new_local_repository(
+    name = "libzlib",
+    build_file = "bazel/repos/libzlib.BUILD",
     path = "/usr",
 )

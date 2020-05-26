@@ -8,7 +8,7 @@ cc_library(
 cc_library(
     name = "program_options",
     srcs = glob([
-        "lib/libboost_program_options.so*",
+        "lib/libboost_program_options.a",
     ]),
     visibility = ["//visibility:public"],
     deps = [":headers"],
@@ -17,7 +17,7 @@ cc_library(
 cc_library(
     name = "iostreams",
     srcs = glob([
-        "lib/libboost_iostreams.so*",
+        "lib/libboost_iostreams.a",
     ]),
     visibility = ["//visibility:public"],
     deps = [":headers"],
