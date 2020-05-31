@@ -17,7 +17,7 @@
 
 namespace oko {
 
-// Lists log files in AWS bucket directory, non-recursively.
+// Lists log files in AWS bucket directory, recursively.
 class S3LogFilesProvider : public LogFilesProvider {
  public:
   // |cache_directory_path| must exist and must be dedicated to

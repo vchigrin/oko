@@ -42,7 +42,6 @@ bool SplitUrl(
 
 }  // namespace
 
-// Lists log files in directory, non-recursively.
 S3LogFilesProvider::S3LogFilesProvider(
     std::unique_ptr<CacheDirectoriesManager> cache_manager,
     std::filesystem::path cache_directory_path,
@@ -108,16 +107,19 @@ outcome::std_result<std::vector<LogFileInfo>>
       assert(false);  // S3 API does not respect Prefix in our request?
       continue;
     }
-    std::string file_name(
+    std::string file_path(
         key.data() + directoryn_name_len,
         key.size() - directoryn_name_len);
-    if (file_name.find('/') != std::string::npos) {
-      // List files non-recursively.
-      continue;
+    auto idx = file_path.rfind('/');
+    std::string file_name;
+    if (idx != std::string::npos) {
+      file_name = file_path.substr(idx + 1);
+    } else {
+      file_name = file_path;
     }
     if (CanBeLogFileName(file_name)) {
       result.emplace_back(LogFileInfo{
-          std::move(file_name),
+          std::move(file_path),
           static_cast<uint64_t>(s3_obj.GetSize())
       });
     }
@@ -144,6 +146,10 @@ S3LogFilesProvider::FetchLog(const std::string& log_file_name) noexcept {
   }
   Aws::S3::Model::GetObjectResult result = outcome.GetResultWithOwnership();
   std::iostream& retrieved_file = result.GetBody();
+  std::filesystem::create_directories(dst_path.parent_path(), ec);
+  if (ec) {
+    return ec;
+  }
   std::filesystem::path tmp_file_path = dst_path;
   tmp_file_path.concat(".tmp");
   {
