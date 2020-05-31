@@ -38,6 +38,7 @@ class S3LogFilesProvider : public LogFilesProvider {
   const std::filesystem::path cache_directory_path_;
   std::string bucket_name_;
   std::string s3_directory_name_;
+  std::string endpoint_url_;
   Aws::SDKOptions aws_options_;
   std::unique_ptr<Aws::S3::S3Client> s3_client_;
 };

@@ -51,6 +51,10 @@ S3LogFilesProvider::S3LogFilesProvider(
   if (!s3_directory_name_.empty() && s3_directory_name_.back() != '/') {
     s3_directory_name_ += '/';
   }
+  const char* overriden_endpoint = std::getenv("S3_ENDPOINT");
+  if (overriden_endpoint) {
+    endpoint_url_ = overriden_endpoint;
+  }
 }
 
 S3LogFilesProvider::~S3LogFilesProvider() {
@@ -64,6 +68,9 @@ void S3LogFilesProvider::EnsureInitialized() noexcept {
   if (!s3_client_) {
     Aws::InitAPI(aws_options_);
     s3_client_ = std::make_unique<Aws::S3::S3Client>();
+    if (!endpoint_url_.empty()) {
+      s3_client_->OverrideEndpoint(endpoint_url_.c_str());
+    }
   }
 }
 
