@@ -42,7 +42,8 @@ outcome::std_result<std::vector<LogFileInfo>>
       return ErrorCodes::kFileFormatCorrupted;
     }
     std::string file_name = entry.name;
-    if (CanBeLogFileName(file_name)) {
+    std::filesystem::path file_path(file_name);
+    if (CanBeLogFileName(file_path.filename().native())) {
       name_to_index_[file_name] = i;
       result.emplace_back(LogFileInfo{std::move(file_name), entry.size});
     }
