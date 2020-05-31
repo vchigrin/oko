@@ -219,18 +219,29 @@ int main(int argc, char* argv[]) {
         ("directory,d", po::value<std::string>(),
             "Path to directory with log files")
         ("s3", po::value<std::string>(), "S3 folder URL")
-        ("zip,z", po::value<std::string>(), "Path to .zip file with logs");
+        ("zip,z", po::value<std::string>(), "Path to .zip file with logs")
+        ("s3_debug_file",
+            po::value<std::string>(),
+            ("Path to file where "
+              "information about S3 communication will be stored.")),
     po::store(
         po::command_line_parser(argc, argv).options(desc).run(),
         vm);
     if (vm.count("help")) {
       std::cout << desc << std::endl;
+      return 0;
     }
     po::notify(vm);
   }
   catch (const po::error &ex) {
     std::cerr << ex.what() << std::endl;
     return 1;
+  }
+
+  std::filesystem::path s3_debug_file_path;
+  if (vm.count("s3_debug_file") != 0) {
+    s3_debug_file_path = vm["s3_debug_file"].as<std::string>();
+    vm.erase("s3_debug_file");
   }
 
   if (vm.size() != 1) {
@@ -273,10 +284,14 @@ int main(int argc, char* argv[]) {
                 maybe_cache_dir.error().message()));
         return 1;
       }
-      provider = std::make_unique<oko::S3LogFilesProvider>(
+      auto s3_provider = std::make_unique<oko::S3LogFilesProvider>(
           std::move(cache_manager),
           std::move(maybe_cache_dir.value()),
           std::move(s3_url));
+      if (!s3_debug_file_path.empty()) {
+        s3_provider->LogToFile(std::move(s3_debug_file_path));
+      }
+      provider = std::move(s3_provider);
     }
     files = RunChooseFile(*provider);
     if (files.empty()) {

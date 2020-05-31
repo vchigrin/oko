@@ -7,6 +7,8 @@
 // Macro provided by curses.h.
 #pragma push_macro("OK")
 #undef OK
+#include <aws/core/utils/logging/AWSLogging.h>
+#include <aws/core/utils/logging/DefaultLogSystem.h>
 #include <aws/s3/model/GetObjectRequest.h>
 #include <aws/s3/model/ListObjectsRequest.h>
 #pragma pop_macro("OK")
@@ -61,6 +63,9 @@ S3LogFilesProvider::~S3LogFilesProvider() {
   if (s3_client_) {
     s3_client_.reset();
     Aws::ShutdownAPI(aws_options_);
+  }
+  if (logging_initialized_) {
+    Aws::Utils::Logging::ShutdownAWSLogging();
   }
 }
 
@@ -158,6 +163,17 @@ S3LogFilesProvider::FetchLog(const std::string& log_file_name) noexcept {
   }
   std::filesystem::rename(tmp_file_path, dst_path);
   return CreateFileForPath(dst_path);
+}
+
+void S3LogFilesProvider::LogToFile(
+    std::filesystem::path log_file_path) noexcept {
+  std::shared_ptr<std::ofstream> log_file = std::make_shared<std::ofstream>(
+      std::move(log_file_path), std::ios::out | std::ios::trunc);
+  Aws::Utils::Logging::InitializeAWSLogging(
+       Aws::MakeShared<Aws::Utils::Logging::DefaultLogSystem>(
+           "logging_",
+           Aws::Utils::Logging::LogLevel::Trace, std::move(log_file)));
+  logging_initialized_ = true;
 }
 
 }  // namespace oko

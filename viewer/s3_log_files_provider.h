@@ -33,6 +33,8 @@ class S3LogFilesProvider : public LogFilesProvider {
   outcome::std_result<std::unique_ptr<LogFile>> FetchLog(
       const std::string& log_file_name) noexcept override;
 
+  void LogToFile(std::filesystem::path log_file_path) noexcept;
+
  private:
   void EnsureInitialized() noexcept;
   const std::filesystem::path cache_directory_path_;
@@ -41,6 +43,7 @@ class S3LogFilesProvider : public LogFilesProvider {
   std::string endpoint_url_;
   Aws::SDKOptions aws_options_;
   std::unique_ptr<Aws::S3::S3Client> s3_client_;
+  bool logging_initialized_ = false;
 };
 
 }  // namespace oko
